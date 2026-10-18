@@ -23,6 +23,7 @@ Status legend: `[ ]` todo, `[x]` done.
 - [ ] **E0-3 Create macOS SwiftUI app target in Xcode** (P0, S). AC: app launches, shows empty library, depends on `PagePalsCore`.
 - [ ] **E0-4 GitHub Actions CI (macOS runner: build + test)** (P0, S). AC: green badge on README.
 - [ ] **E0-5 SwiftLint/swift-format config** (P2, S).
+- [x] **E0-7 Browser prototype of the child experience** (P1, M) - `prototype/index.html`: write, tick and match tasks, hints, stars, growing Pal. Used to validate the feel before building the SwiftUI player.
 - [ ] **E0-6 Synthetic sample pages for tests** (P0, M). AC: 5+ generated pages covering each task type, no copyrighted content.
 
 ## E1 Import pipeline (M1-M2)

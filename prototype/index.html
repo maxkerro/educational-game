@@ -1,0 +1,491 @@
+<title>PagePals Prototype</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap">
+<style>
+/* Layout: one column "workbook page". Header with the Pal and stars, one task card at a time, big tap targets.
+   Single deliberate look (bright workbook sky), so every colour is set explicitly. */
+:root {
+  --sky: #d7ecfb;
+  --paper: #ffffff;
+  --ink: #14304a;
+  --ink-soft: #46637d;
+  --line: #b4d3e8;
+  --blue: #2b6fd6;
+  --sun: #ffc83d;
+  --mint: #1fa56e;
+  --mint-bg: #d8f4e6;
+  --coral: #e5524a;
+  --coral-bg: #fde3e0;
+  --pal: #8d6ee0;
+  --pal-dark: #5f43b3;
+  --font-display: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
+  --font-body: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--sky);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.4;
+  padding-block: 18px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 720px; margin: 0 auto; display: grid; gap: 16px; }
+h1, h2 { font-family: var(--font-display); font-weight: 600; margin: 0; text-wrap: balance; }
+
+/* header */
+.top { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center; }
+.pal-box { width: 112px; height: 112px; background: var(--paper); border-radius: 28px; border: 3px solid var(--line); display: grid; place-items: center; }
+.pal-box svg { width: 100%; height: 100%; }
+.stats { min-width: 0; display: grid; gap: 8px; }
+.stars { font-family: var(--font-display); font-size: 30px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.stars .num { font-variant-numeric: tabular-nums; }
+.stage-line { font-size: 15px; color: var(--ink-soft); }
+.meter { height: 14px; background: var(--paper); border-radius: 999px; border: 2px solid var(--line); overflow: hidden; }
+.meter > i { display: block; height: 100%; width: 0; background: var(--sun); border-radius: 999px; transition: width .4s ease; }
+.dots { display: flex; gap: 8px; }
+.dots span { width: 28px; height: 10px; border-radius: 999px; background: var(--line); }
+.dots span.on { background: var(--blue); }
+.dots span.done { background: var(--mint); }
+
+/* Pal */
+.pal-body { fill: var(--pal); }
+.pal-belly { fill: #b7a1f2; }
+.pal-eye { fill: #fff; }
+.pal-pupil { fill: var(--ink); }
+.pal-cheek { fill: #ff9fb1; opacity: .8; }
+.pal-mouth { fill: none; stroke: var(--ink); stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+.pal-mouth.open { fill: #5b1f2a; }
+.leaf, .crown { display: none; }
+svg[data-stage="2"] .leaf, svg[data-stage="3"] .leaf { display: inline; }
+svg[data-stage="3"] .crown { display: inline; }
+.pal-g { transform-origin: 60px 100px; transition: transform .4s ease; }
+svg[data-stage="1"] .pal-g { transform: scale(.82); }
+svg[data-stage="2"] .pal-g { transform: scale(.94); }
+svg[data-stage="3"] .pal-g { transform: scale(1.04); }
+.pal-box.bump svg { animation: bump .6s ease; }
+@keyframes bump { 30% { transform: translateY(-10px) scale(1.06); } 60% { transform: translateY(0) scale(.97); } }
+
+/* task card */
+.card { background: var(--paper); border-radius: 28px; border: 3px solid var(--line); padding: 20px; display: grid; gap: 16px; }
+.card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.card-head h2 { font-size: 26px; }
+.eyebrow { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); }
+.speak { flex: none; width: 48px; height: 48px; border-radius: 50%; border: 3px solid var(--line); background: var(--paper); color: var(--blue); font-size: 22px; cursor: pointer; }
+.rows { display: grid; gap: 12px; }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; align-items: center; padding: 12px 14px; border-radius: 18px; background: #f2f8fd; border: 3px solid transparent; }
+.row.ok { background: var(--mint-bg); border-color: var(--mint); }
+.row.shake { animation: shake .35s; border-color: var(--coral); background: var(--coral-bg); }
+@keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+.row .msg { grid-column: 1 / -1; font-size: 15px; color: var(--ink-soft); min-height: 0; }
+.row .msg:empty { display: none; }
+.row.ok .msg { color: var(--mint); }
+.eq { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 22px; }
+.eq label { font-weight: 800; }
+input[type="text"] { width: 9.5ch; font: inherit; font-size: 22px; font-weight: 800; color: var(--ink); background: var(--paper); border: 3px solid var(--line); border-radius: 14px; padding: 8px 12px; min-height: 48px; }
+input[type="text"]:disabled { background: transparent; border-color: transparent; color: var(--mint); }
+button { font-family: var(--font-body); }
+.btn { min-height: 48px; padding: 8px 20px; border-radius: 16px; border: 0; background: var(--blue); color: #fff; font-size: 18px; font-weight: 800; cursor: pointer; }
+.btn.ghost { background: var(--paper); color: var(--blue); border: 3px solid var(--line); }
+.btn:disabled { opacity: .45; cursor: default; }
+button:focus-visible, input:focus-visible { outline: 4px solid var(--sun); outline-offset: 2px; }
+
+/* tick task */
+.scene { font-size: 30px; letter-spacing: 2px; line-height: 1.2; }
+.say { font-size: 19px; }
+.tick-btns { display: flex; gap: 8px; }
+.tick { width: 56px; height: 56px; border-radius: 50%; border: 3px solid var(--line); background: var(--paper); font-size: 26px; font-weight: 800; cursor: pointer; color: var(--ink); }
+.tick.chosen { background: var(--mint); border-color: var(--mint); color: #fff; }
+.tick:disabled { cursor: default; }
+
+/* matching task */
+.match { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
+.match .col { display: grid; gap: 10px; align-content: start; }
+.pick { min-height: 60px; border-radius: 18px; border: 3px solid var(--line); background: #f2f8fd; color: var(--ink); font-size: 22px; font-weight: 800; cursor: pointer; padding: 6px 12px; }
+.pick.pic { font-size: 34px; }
+.pick.sel { border-color: var(--blue); background: #dce9fc; }
+.pick.shake { animation: shake .35s; border-color: var(--coral); background: var(--coral-bg); }
+.pick.locked { cursor: default; color: var(--ink); }
+.match-msg { grid-column: 1 / -1; font-size: 15px; color: var(--ink-soft); min-height: 22px; }
+
+/* done panel */
+.done { display: grid; gap: 12px; justify-items: start; padding: 16px; border-radius: 20px; background: var(--mint-bg); border: 3px solid var(--mint); }
+.done h2 { font-size: 24px; }
+.finale { text-align: left; }
+.note { font-size: 14px; color: var(--ink-soft); font-weight: 700; }
+@media (max-width: 480px) {
+  .pal-box { width: 92px; height: 92px; border-radius: 24px; }
+  .card { padding: 16px; border-radius: 24px; }
+  .card-head h2 { font-size: 22px; }
+  .eq { font-size: 20px; }
+  .row { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .row.shake, .pick.shake, .pal-box.bump svg { animation: none; }
+  .pal-g, .meter > i { transition: none; }
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="pal-box" id="palBox">
+      <svg id="pal" viewBox="0 0 120 120" data-stage="1" role="img" aria-label="Your Pal, a purple blob friend">
+        <ellipse cx="60" cy="108" rx="30" ry="5" fill="#000" opacity=".08"/>
+        <g class="pal-g">
+          <g class="leaf"><path d="M60 24 Q58 12 66 8 Q72 16 66 24 Z" fill="#35b36f"/></g>
+          <ellipse class="pal-body" cx="60" cy="68" rx="40" ry="38"/>
+          <ellipse class="pal-belly" cx="60" cy="82" rx="24" ry="20"/>
+          <g class="crown"><path d="M42 34 L48 20 L55 31 L60 18 L65 31 L72 20 L78 34 Z" fill="#ffc83d" stroke="#d99a00" stroke-width="2" stroke-linejoin="round"/></g>
+          <circle class="pal-eye" cx="45" cy="62" r="11"/><circle class="pal-eye" cx="75" cy="62" r="11"/>
+          <circle class="pal-pupil" cx="47" cy="63" r="5.5"/><circle class="pal-pupil" cx="73" cy="63" r="5.5"/>
+          <circle class="pal-cheek" cx="31" cy="76" r="6"/><circle class="pal-cheek" cx="89" cy="76" r="6"/>
+          <path id="palMouth" class="pal-mouth" d="M50 78 Q60 88 70 78"/>
+        </g>
+      </svg>
+    </div>
+    <div class="stats">
+      <div class="stars"><span aria-hidden="true" style="color:var(--sun)">★</span><span class="num" id="starNum">0</span><span class="stage-line" id="stageLine">Pal: little</span></div>
+      <div class="meter" aria-hidden="true"><i id="meter"></i></div>
+      <div class="dots" id="dots" aria-label="Task progress"></div>
+    </div>
+  </header>
+
+  <main class="card" id="card" aria-live="polite"></main>
+
+  <p class="note">Prototype with sample tasks written for this demo. The real app builds these from the pages of your own PDF workbook.</p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- Pal and stars ----------
+  var state = { stars: 0, task: 0 };
+  var STAGE_AT = [0, 8, 16];
+  var STAGE_NAME = ["little", "growing", "royal"];
+  var MAX_STARS = 24;
+  var palEl = document.getElementById("pal");
+  var mouth = document.getElementById("palMouth");
+  var palBox = document.getElementById("palBox");
+  var moodTimer = null;
+
+  function stageFor(stars) {
+    var s = 1;
+    if (stars >= STAGE_AT[1]) s = 2;
+    if (stars >= STAGE_AT[2]) s = 3;
+    return s;
+  }
+  function setMood(mood, ms) {
+    var d = "M50 78 Q60 88 70 78", open = false;
+    if (mood === "cheer") { d = "M47 74 Q60 100 73 74 Z"; open = true; }
+    if (mood === "oops") { d = "M52 85 Q60 78 68 85"; }
+    mouth.setAttribute("d", d);
+    mouth.setAttribute("class", "pal-mouth" + (open ? " open" : ""));
+    clearTimeout(moodTimer);
+    if (mood !== "happy") moodTimer = setTimeout(function () { setMood("happy"); }, ms || 1400);
+  }
+  function bump() {
+    palBox.classList.remove("bump");
+    void palBox.offsetWidth;
+    palBox.classList.add("bump");
+  }
+  function renderStats() {
+    var st = stageFor(state.stars);
+    document.getElementById("starNum").textContent = state.stars;
+    document.getElementById("stageLine").textContent = "Pal: " + STAGE_NAME[st - 1];
+    palEl.setAttribute("data-stage", String(st));
+    var pct;
+    if (st === 3) { pct = 100; }
+    else {
+      var lo = STAGE_AT[st - 1], hi = STAGE_AT[st];
+      pct = Math.round(((state.stars - lo) / (hi - lo)) * 100);
+    }
+    document.getElementById("meter").style.width = pct + "%";
+  }
+  function award(n) {
+    var before = stageFor(state.stars);
+    state.stars += n;
+    renderStats();
+    setMood("cheer");
+    bump();
+    if (stageFor(state.stars) > before) { return true; }
+    return false;
+  }
+  function renderDots() {
+    var el = document.getElementById("dots");
+    el.innerHTML = "";
+    for (var i = 0; i < TASKS.length; i++) {
+      var s = document.createElement("span");
+      if (i < state.task) s.className = "done";
+      else if (i === state.task) s.className = "on";
+      el.appendChild(s);
+    }
+  }
+
+  // ---------- helpers ----------
+  function norm(s) { return String(s).trim().toLowerCase().replace(/\s+/g, " "); }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+  function speak(text) {
+    try {
+      if (!window.speechSynthesis) return;
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text);
+      u.lang = "en-US"; u.rate = 0.85;
+      window.speechSynthesis.speak(u);
+    } catch (e) { /* speech is optional */ }
+  }
+  function shake(node) {
+    node.classList.remove("shake");
+    void node.offsetWidth;
+    node.classList.add("shake");
+    setTimeout(function () { node.classList.remove("shake"); }, 400);
+  }
+
+  // ---------- task runner ----------
+  var card = document.getElementById("card");
+
+  function head(eyebrow, title, voice) {
+    var h = el("div", "card-head");
+    var t = el("div");
+    t.appendChild(el("div", "eyebrow", eyebrow));
+    t.appendChild(el("h2", "", title));
+    h.appendChild(t);
+    var b = el("button", "speak", "🔊");
+    b.type = "button";
+    b.setAttribute("aria-label", "Read the instruction aloud");
+    b.addEventListener("click", function () { speak(voice); });
+    h.appendChild(b);
+    return h;
+  }
+
+  // Each task gets a context: total items, and a function item solved (firstTry) that handles stars and the done panel.
+  function makeContext(total) {
+    var ctx = { total: total, solved: 0, gained: 0, grew: false };
+    ctx.solve = function (firstTry) {
+      ctx.solved++;
+      var n = firstTry ? 2 : 1;
+      ctx.gained += n;
+      if (award(n)) ctx.grew = true;
+      if (ctx.solved === ctx.total) showDone(ctx);
+    };
+    return ctx;
+  }
+
+  function showDone(ctx) {
+    var last = state.task === TASKS.length - 1;
+    var box = el("div", "done");
+    box.appendChild(el("h2", "", "Great work! +" + ctx.gained + " stars"));
+    if (ctx.grew) box.appendChild(el("div", "", "Your Pal just grew!"));
+    var b = el("button", "btn", last ? "See my Pal" : "Next task");
+    b.type = "button";
+    b.addEventListener("click", function () { state.task++; renderTask(); });
+    box.appendChild(b);
+    card.appendChild(box);
+    setMood("cheer", 2200);
+    b.focus();
+  }
+
+  // Task 1: fill in (write the answer)
+  var FILL = [
+    ["three + one =", "four"],
+    ["two + five =", "seven"],
+    ["ten − seven =", "three"],
+    ["nine − eight =", "one"]
+  ];
+  function buildFill() {
+    card.appendChild(head("Task 1 of 3 · Write", "How much is it? Write the answer in words.", "How much is it? Write the answer in words."));
+    var rows = el("div", "rows");
+    var ctx = makeContext(FILL.length);
+    FILL.forEach(function (item, i) {
+      var attempts = 0, locked = false;
+      var row = el("div", "row");
+      var eq = el("div", "eq");
+      var lab = el("label", "", item[0]);
+      lab.setAttribute("for", "fill" + i);
+      var inp = el("input");
+      inp.type = "text"; inp.id = "fill" + i;
+      inp.setAttribute("autocomplete", "off");
+      inp.setAttribute("autocapitalize", "none");
+      inp.setAttribute("spellcheck", "false");
+      eq.appendChild(lab); eq.appendChild(inp);
+      var btn = el("button", "btn", "Check");
+      btn.type = "button";
+      var msg = el("div", "msg");
+      row.appendChild(eq); row.appendChild(btn); row.appendChild(msg);
+      function check() {
+        if (locked) return;
+        var v = norm(inp.value);
+        if (!v) { msg.textContent = "Type your answer first."; return; }
+        if (v === item[1]) {
+          locked = true;
+          row.classList.add("ok");
+          inp.disabled = true; btn.disabled = true;
+          msg.textContent = "Yes! " + item[0] + " " + item[1];
+          ctx.solve(attempts === 0);
+        } else {
+          attempts++;
+          shake(row);
+          setMood("oops");
+          msg.textContent = attempts >= 2
+            ? "Not yet. Hint: it starts with “" + item[1].charAt(0) + "”."
+            : "Not yet. Try again!";
+        }
+      }
+      btn.addEventListener("click", check);
+      inp.addEventListener("keydown", function (e) { if (e.key === "Enter") check(); });
+      rows.appendChild(row);
+    });
+    card.appendChild(rows);
+  }
+
+  // Task 2: correct or wrong (tick)
+  var TICKS = [
+    { scene: "🐞🐞", text: "There are two ladybirds.", truth: true },
+    { scene: "🦋🦋🦋", text: "There is one butterfly.", truth: false },
+    { scene: "🌸🌸🌸🌸🌸🌸🌸🌸", text: "There are eight flowers.", truth: true },
+    { scene: "🐝🐝🐝🐝🐝", text: "There are seven bees.", truth: false }
+  ];
+  function buildTick() {
+    card.appendChild(head("Task 2 of 3 · Tick", "Correct or wrong? Tick ✓ or ✗.", "Correct or wrong? Look at the picture and tick."));
+    var rows = el("div", "rows");
+    var ctx = makeContext(TICKS.length);
+    TICKS.forEach(function (item, i) {
+      var attempts = 0, locked = false;
+      var row = el("div", "row");
+      var left = el("div");
+      var sc = el("div", "scene", item.scene);
+      sc.setAttribute("aria-hidden", "true");
+      var say = el("div", "say", item.text);
+      left.appendChild(sc); left.appendChild(say);
+      var btns = el("div", "tick-btns");
+      var yes = el("button", "tick", "✓");
+      var no = el("button", "tick", "✗");
+      yes.type = "button"; no.type = "button";
+      yes.setAttribute("aria-label", "Correct");
+      no.setAttribute("aria-label", "Wrong");
+      var msg = el("div", "msg");
+      function answer(val, btn) {
+        if (locked) return;
+        if (val === item.truth) {
+          locked = true;
+          btn.classList.add("chosen");
+          yes.disabled = true; no.disabled = true;
+          row.classList.add("ok");
+          msg.textContent = item.truth ? "Right, that is correct!" : "Right, that is wrong. Count again!";
+          ctx.solve(attempts === 0);
+        } else {
+          attempts++;
+          shake(row);
+          setMood("oops");
+          msg.textContent = attempts >= 2 ? "Hint: count the pictures one by one." : "Not quite. Count again!";
+        }
+      }
+      yes.addEventListener("click", function () { answer(true, yes); });
+      no.addEventListener("click", function () { answer(false, no); });
+      btns.appendChild(yes); btns.appendChild(no);
+      row.appendChild(left); row.appendChild(btns); row.appendChild(msg);
+      rows.appendChild(row);
+    });
+    card.appendChild(rows);
+  }
+
+  // Task 3: matching (draw lines, done as tap word then tap picture)
+  var WORDS = ["apple", "ball", "kite", "drum"];
+  var PICS = { apple: "🍎", ball: "⚽", kite: "🪁", drum: "🥁" };
+  var PIC_ORDER = ["kite", "apple", "drum", "ball"];
+  var PAIR_COLORS = ["#ffd98a", "#bfe6cf", "#cdbcf6", "#ffc2bd"];
+  function buildMatch() {
+    card.appendChild(head("Task 3 of 3 · Match", "Match each word with its picture.", "Match each word with its picture. Tap a word, then tap its picture."));
+    var ctx = makeContext(WORDS.length);
+    var grid = el("div", "match");
+    var left = el("div", "col"), right = el("div", "col");
+    var msg = el("div", "match-msg", "Tap a word, then tap its picture.");
+    var sel = null, matched = 0;
+    var misses = {};
+    var wordBtns = {}, picBtns = {};
+    WORDS.forEach(function (w) {
+      var b = el("button", "pick", w);
+      b.type = "button";
+      b.addEventListener("click", function () {
+        if (b.classList.contains("locked")) return;
+        Object.keys(wordBtns).forEach(function (k) { wordBtns[k].classList.remove("sel"); });
+        sel = w; b.classList.add("sel");
+        msg.textContent = "Now tap the picture for “" + w + "”.";
+        speak(w);
+      });
+      wordBtns[w] = b; left.appendChild(b);
+    });
+    PIC_ORDER.forEach(function (w) {
+      var b = el("button", "pick pic", PICS[w]);
+      b.type = "button";
+      b.setAttribute("aria-label", "Picture " + w);
+      b.addEventListener("click", function () {
+        if (b.classList.contains("locked")) return;
+        if (!sel) { msg.textContent = "Pick a word first."; return; }
+        if (sel === w) {
+          var color = PAIR_COLORS[matched % PAIR_COLORS.length];
+          [wordBtns[w], b].forEach(function (x) {
+            x.classList.remove("sel"); x.classList.add("locked");
+            x.style.background = color; x.style.borderColor = color;
+          });
+          matched++;
+          msg.textContent = "Yes! " + w + " matches.";
+          var first = !misses[w];
+          sel = null;
+          ctx.solve(first);
+        } else {
+          misses[sel] = true;
+          shake(b); shake(wordBtns[sel]);
+          setMood("oops");
+          msg.textContent = "Not that one. Try another picture!";
+        }
+      });
+      picBtns[w] = b; right.appendChild(b);
+    });
+    grid.appendChild(left); grid.appendChild(right); grid.appendChild(msg);
+    card.appendChild(grid);
+  }
+
+  // Final screen
+  function buildFinale() {
+    var st = stageFor(state.stars);
+    card.appendChild(head("All tasks done", "Your Pal is " + STAGE_NAME[st - 1] + "!", "All tasks done. Well done!"));
+    var box = el("div", "finale");
+    var p = el("p", "", "You collected " + state.stars + " of " + MAX_STARS + " stars. Finish tasks without mistakes to earn bonus stars and help your Pal grow.");
+    box.appendChild(p);
+    var b = el("button", "btn", "Play again");
+    b.type = "button";
+    b.addEventListener("click", function () { state.stars = 0; state.task = 0; renderStats(); renderTask(); });
+    box.appendChild(b);
+    card.appendChild(box);
+    setMood("cheer", 3000);
+  }
+
+  var TASKS = [buildFill, buildTick, buildMatch];
+
+  function renderTask() {
+    card.innerHTML = "";
+    renderDots();
+    if (state.task >= TASKS.length) {
+      var all = document.getElementById("dots").children;
+      for (var i = 0; i < all.length; i++) all[i].className = "done";
+      buildFinale();
+    } else {
+      TASKS[state.task]();
+    }
+    window.scrollTo(0, 0);
+  }
+
+  renderStats();
+  renderTask();
+})();
+</script>

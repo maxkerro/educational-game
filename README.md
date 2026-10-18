@@ -34,6 +34,7 @@ Researched popular children's learning apps (Khan Academy Kids, Prodigy Math, Du
 Package.swift                 Swift package (core library + tests)
 Sources/PagePalsCore/         Lesson model + answer checking (UI-independent)
 Tests/PagePalsCoreTests/      Unit tests
+prototype/index.html          Playable browser prototype of the child experience (open in any browser)
 docs/                         Concept, architecture, research
 BACKLOG.md                    Roadmap
 ```
