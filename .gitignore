@@ -1,0 +1,12 @@
+# Swift / Xcode
+.build/
+.swiftpm/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+.DS_Store
+
+# User workbooks and imported packs are private / copyrighted: never commit
+samples/
+*.pdf
+Books/

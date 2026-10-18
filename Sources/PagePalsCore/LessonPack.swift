@@ -1,0 +1,131 @@
+import Foundation
+
+/// A rectangle in normalised page coordinates (0...1, origin top-left).
+public struct NormalizedRect: Codable, Equatable, Sendable {
+    public var x: Double
+    public var y: Double
+    public var width: Double
+    public var height: Double
+
+    public init(x: Double, y: Double, width: Double, height: Double) {
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+    }
+}
+
+/// The interactive form a book task is rebuilt as.
+public enum TaskKind: String, Codable, Sendable, CaseIterable {
+    case fillIn          // write text into blanks
+    case trueFalse       // tick correct / wrong
+    case numberInOrder   // number pictures or sentences
+    case matching        // draw lines between pairs
+    case crossword
+    case multipleChoice  // read and choose one
+    case openTask        // fallback: parent confirms
+}
+
+/// One answerable element inside a task (a blank, a statement, a picture, ...).
+public struct TaskItem: Codable, Equatable, Identifiable, Sendable {
+    public var id: String
+    public var label: String?
+    public var region: NormalizedRect?
+
+    public init(id: String, label: String? = nil, region: NormalizedRect? = nil) {
+        self.id = id
+        self.label = label
+        self.region = region
+    }
+}
+
+/// Expected answers, keyed by item id. Only the dictionaries relevant to the task kind are used.
+public struct AnswerKey: Codable, Equatable, Sendable {
+    public var text: [String: String]
+    public var booleans: [String: Bool]
+    public var order: [String: Int]
+    public var pairs: [String: String]   // item id -> target item id
+    public var choice: String?           // chosen item id for multipleChoice
+
+    public init(
+        text: [String: String] = [:],
+        booleans: [String: Bool] = [:],
+        order: [String: Int] = [:],
+        pairs: [String: String] = [:],
+        choice: String? = nil
+    ) {
+        self.text = text
+        self.booleans = booleans
+        self.order = order
+        self.pairs = pairs
+        self.choice = choice
+    }
+}
+
+/// The child's answers; same shape as the key.
+public typealias TaskResponse = AnswerKey
+
+public struct PlayTask: Codable, Equatable, Identifiable, Sendable {
+    public var id: String
+    public var kind: TaskKind
+    public var prompt: String
+    public var region: NormalizedRect?
+    public var items: [TaskItem]
+    /// `nil` means the key is unknown (task must be confirmed by a parent).
+    public var key: AnswerKey?
+    /// Import confidence 0...1; low values go to the parent review queue.
+    public var confidence: Double
+
+    public init(
+        id: String,
+        kind: TaskKind,
+        prompt: String,
+        region: NormalizedRect? = nil,
+        items: [TaskItem] = [],
+        key: AnswerKey? = nil,
+        confidence: Double = 1.0
+    ) {
+        self.id = id
+        self.kind = kind
+        self.prompt = prompt
+        self.region = region
+        self.items = items
+        self.key = key
+        self.confidence = confidence
+    }
+}
+
+public struct BookPage: Codable, Equatable, Identifiable, Sendable {
+    public var id: String
+    public var number: Int
+    public var imageFile: String
+    public var tasks: [PlayTask]
+
+    public init(id: String, number: Int, imageFile: String, tasks: [PlayTask] = []) {
+        self.id = id
+        self.number = number
+        self.imageFile = imageFile
+        self.tasks = tasks
+    }
+}
+
+public struct LessonPack: Codable, Equatable, Sendable {
+    public static let currentVersion = 1
+
+    public var version: Int
+    public var title: String
+    public var language: String
+    public var pages: [BookPage]
+
+    public init(
+        version: Int = LessonPack.currentVersion,
+        title: String,
+        language: String,
+        pages: [BookPage] = []
+    ) {
+        self.version = version
+        self.title = title
+        self.language = language
+        self.pages = pages
+    }
+}
