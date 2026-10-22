@@ -24,6 +24,7 @@ Researched popular children's learning apps (Khan Academy Kids, Prodigy Math, Du
 ## Tech (planned)
 
 - Swift 5.9+, SwiftUI, macOS 14+ (Apple Silicon first)
+- Built with Swift Package Manager and the Command Line Tools only; **full Xcode is not required**
 - PDFKit (render pages) + Vision (on-device OCR and layout) for import
 - Optional AI-assisted task detection (cloud, opt-in) with on-device fallback
 - Local-first storage (SwiftData / JSON lesson packs); no child data leaves the Mac by default
@@ -31,24 +32,32 @@ Researched popular children's learning apps (Khan Academy Kids, Prodigy Math, Du
 ## Repository layout
 
 ```
-Package.swift                 Swift package (core library + tests)
+Package.swift                 Swift package (core library, app, checks)
 Sources/PagePalsCore/         Lesson model + answer checking (UI-independent)
-Tests/PagePalsCoreTests/      Unit tests
+Sources/PagePalsImport/       PDF rendering (PDFKit) and text recognition (Vision)
+Sources/PagePalsApp/          SwiftUI macOS app (Play tab, Import tab)
+Sources/PagePalsChecks/       Logic checks runner (replaces XCTest, which needs Xcode)
+Resources/Info.plist          App bundle metadata
+build-app.sh                  Builds build/PagePals.app
 prototype/index.html          Playable browser prototype of the child experience (open in any browser)
-docs/                         Concept, architecture, research
+docs/                         Concept, architecture, research, picture handling
+tools/picture-prototype/      Python prototype used to tune picture detection
 BACKLOG.md                    Roadmap
 ```
 
-The macOS app target (SwiftUI) is created in Xcode in backlog item **E0-3**; the core library is already usable from it.
 
 ## Getting started
 
+Needs macOS 14+ and the Command Line Tools (`xcode-select --install`). No Xcode.
+
 ```bash
-swift build
-swift test
+swift build                 # compile everything
+swift run PagePalsChecks    # run the logic checks (exit code 1 on failure)
+./build-app.sh              # build build/PagePals.app
+open build/PagePals.app
 ```
 
-Requires Xcode 15+ on macOS 14+. Note: the skeleton was written without access to a Swift compiler, so the first `swift test` run is the first compile. Fix any small errors it reports.
+Note: the Swift code was written without access to a Swift compiler, so the first build is the first compile. Fix any small errors it reports.
 
 ## Content and privacy
 

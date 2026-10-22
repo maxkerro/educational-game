@@ -1,7 +1,7 @@
 import Foundation
 
 /// A rectangle in normalised page coordinates (0...1, origin top-left).
-public struct NormalizedRect: Codable, Equatable, Sendable {
+public struct PageRect: Codable, Equatable, Sendable {
     public var x: Double
     public var y: Double
     public var width: Double
@@ -21,7 +21,8 @@ public enum TaskKind: String, Codable, Sendable, CaseIterable {
     case trueFalse       // tick correct / wrong
     case numberInOrder   // number pictures or sentences
     case matching        // draw lines between pairs
-    case crossword
+    case crossword       // grid with picture clues
+    case wordSearch      // find the words in a letter grid, then fill in
     case multipleChoice  // read and choose one
     case openTask        // fallback: parent confirms
 }
@@ -30,12 +31,15 @@ public enum TaskKind: String, Codable, Sendable, CaseIterable {
 public struct TaskItem: Codable, Equatable, Identifiable, Sendable {
     public var id: String
     public var label: String?
-    public var region: NormalizedRect?
+    public var region: PageRect?
+    /// Picture cut out of the book page for this item (file name inside the pack). Shown as in the book.
+    public var imageFile: String?
 
-    public init(id: String, label: String? = nil, region: NormalizedRect? = nil) {
+    public init(id: String, label: String? = nil, region: PageRect? = nil, imageFile: String? = nil) {
         self.id = id
         self.label = label
         self.region = region
+        self.imageFile = imageFile
     }
 }
 
@@ -69,7 +73,7 @@ public struct PlayTask: Codable, Equatable, Identifiable, Sendable {
     public var id: String
     public var kind: TaskKind
     public var prompt: String
-    public var region: NormalizedRect?
+    public var region: PageRect?
     public var items: [TaskItem]
     /// `nil` means the key is unknown (task must be confirmed by a parent).
     public var key: AnswerKey?
@@ -80,7 +84,7 @@ public struct PlayTask: Codable, Equatable, Identifiable, Sendable {
         id: String,
         kind: TaskKind,
         prompt: String,
-        region: NormalizedRect? = nil,
+        region: PageRect? = nil,
         items: [TaskItem] = [],
         key: AnswerKey? = nil,
         confidence: Double = 1.0

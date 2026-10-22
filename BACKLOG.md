@@ -19,18 +19,18 @@ Status legend: `[ ]` todo, `[x]` done.
 ## E0 Foundations (M0)
 
 - [x] **E0-1 Concept, architecture, research docs** (P0, S) - this repo.
-- [x] **E0-2 Swift package with core model + evaluator + tests** (P0, S) - `PagePalsCore`. *First compile still to be verified on a Mac.*
-- [ ] **E0-3 Create macOS SwiftUI app target in Xcode** (P0, S). AC: app launches, shows empty library, depends on `PagePalsCore`.
-- [ ] **E0-4 GitHub Actions CI (macOS runner: build + test)** (P0, S). AC: green badge on README.
+- [x] **E0-2 Swift package with core model + evaluator + checks** (P0, S) - `PagePalsCore` plus `PagePalsChecks` runner (XCTest is not available without Xcode). *Run `swift run PagePalsChecks` to verify.*
+- [x] **E0-3 macOS SwiftUI app target built with SwiftPM, no Xcode** (P0, S). `PagePalsApp` with a demo fill-in task and `build-app.sh`; built and checks passed on the Mac.
+- [ ] **E0-4 GitHub Actions CI (macOS runner: `swift build` + `swift run PagePalsChecks`)** (P0, S). AC: green badge on README.
 - [ ] **E0-5 SwiftLint/swift-format config** (P2, S).
 - [x] **E0-7 Browser prototype of the child experience** (P1, M) - `prototype/index.html`: write, tick and match tasks, hints, stars, growing Pal. Used to validate the feel before building the SwiftUI player.
 - [ ] **E0-6 Synthetic sample pages for tests** (P0, M). AC: 5+ generated pages covering each task type, no copyrighted content.
 
 ## E1 Import pipeline (M1-M2)
 
-- [ ] **E1-1 PDF picker + page rendering at 200 dpi** (P0, M). AC: drop a PDF on the window, thumbnails of all pages appear.
+- [ ] **E1-1 PDF picker + page rendering at 200 dpi** (P0, M). Done: Open PDF button, page view, previous/next (`PagePalsImport/PDFBook`, Import tab). *Awaiting first run.* Still open: drag-and-drop, thumbnails of all pages.
 - [ ] **E1-2 Spread splitting** (P1, M). Detect gutter in two-page scans and split into logical pages. AC: sample book spreads become single pages with correct page numbers.
-- [ ] **E1-3 OCR with Vision (en/de/ru)** (P0, M). AC: text blocks with normalised bounding boxes stored per page; language configurable.
+- [ ] **E1-3 OCR with Vision (en/de/ru)** (P0, M). Done: `PageOCR` returns lines with normalised boxes and confidence, drawn over the page in the Import tab (en-US, de-DE). *Awaiting first run.* Still open: ru-RU, store results per page, language setting.
 - [ ] **E1-4 Task header detection** (P0, M). Numbered headers + instruction keywords ("Write", "Tick", "Draw lines", "Number", "Crossword", "Read and ..."). AC: >=80% of headers found on the sample book (measured by golden test).
 - [ ] **E1-5 Blank / checkbox / bubble detection** (P0, L). Vision rectangle + contour detection for write-in lines, tick circles, numbered bubbles. AC: regions attached to the right task.
 - [ ] **E1-6 Task kind classifier (rules)** (P0, M). Maps header + shapes to `TaskKind`; unknown -> `openTask`.
@@ -38,7 +38,24 @@ Status legend: `[ ]` todo, `[x]` done.
 - [ ] **E1-8 Optional AI-assisted detection (opt-in)** (P1, L). Vision model proposes tasks + answers from page image; parent sees exactly what will be sent; offline fallback always works. AC: toggle in settings, off by default.
 - [ ] **E1-9 Answer key extraction from key pages** (P1, M).
 - [ ] **E1-10 Import progress UI + cancel + resume** (P1, M).
-- [ ] **E1-11 Crossword grid detection** (P1, L).
+- [ ] **E1-11 Crossword grid detection** (P1, L). Moved to E9-4.
+
+## E9 Picture fidelity and puzzle tasks (M2)
+
+Requirement from the product owner: tasks in the app must look the same as in the book, and every word must show the **same picture** as in the PDF.
+
+- [ ] **E9-1 Picture detection and cut-out** (P0, L). Prototype validated in Python on the sample (`tools/picture-prototype`): crossword page found all 10 fruit pictures plus the basket; word-search page found hands, ears, eyes, lips, legs, feet. Swift port in `PictureFinder`, Import tab shows blue boxes and cropped thumbnails. *Awaiting first run on the Mac.* Known gaps: stacked pictures can merge, grey writing lines can stick to a picture, tiny drawings can be missed.
+- [ ] **E9-2 Save picture crops as lesson-pack assets** (P0, S). PNG per picture with a margin, referenced by `TaskItem.imageFile`.
+- [ ] **E9-3 Picture-to-word association** (P0, L). Crossword: picture next to the first cell of a word. Fill-in sentences: picture right of the blank. Matching: picture next to its line start. Word lists: order and proximity. Always editable in the review editor.
+- [ ] **E9-4 Crossword grid detection** (P0, L). Find cells (curved photo, perspective), group into across/down runs, number them. Replaces E1-11.
+- [ ] **E9-5 Crossword solver** (P1, M). Fit the printed word list into the runs by length and crossing letters to get the answer key without an answer page.
+- [ ] **E9-6 Crossword player with picture clues** (P0, L). Rebuilt grid, original pictures as clues, keyboard input, per-letter feedback.
+- [ ] **E9-7 Word-search detection** (P1, L). Letter grid cells (Vision reads single letters unreliably, so per-cell recognition), word list, sentence blanks with their pictures.
+- [ ] **E9-8 Word-search player** (P1, L). Swipe to select, found words crossed off, then fill in the sentences next to the original drawings.
+- [ ] **E9-9 Original-picture matching and number-the-pictures players** (P0, M). Use cropped pictures instead of emoji/placeholder art (E3-4, E3-5).
+- [ ] **E9-10 Review editor: adjust picture boxes and assign words** (P0, M). Merge/split boxes, drag corners, pick the word a picture belongs to. Extends E2-3.
+- [ ] **E9-12 "Put the number into each circle" task** (P0, M). One page task = one interactive task, not many loose pictures. Done in code: `CircleFinder` (empty circles, prototype found 9/9 on the sample), `TaskBuilder` (header "1. Number." -> task zone, circles -> slots), `TaskPlayerView` (original page with input fields in the circles, green/orange feedback, grown-up enters the answer key once, saved per book on the Mac), checks in `PagePalsChecks`. *Awaiting first run on the Mac.* Still open: guess the key automatically (printed list + pictures), several columns per page, circles with a different radius on the same page.
+- [ ] **E9-11 Improve detection on difficult pages** (P1, M). Anti-merge for stacked pictures, ignore writing lines, small drawings; measure with golden pages (E7-6).
 
 ## E2 Parent review editor (M1-M2)
 
@@ -54,7 +71,7 @@ Status legend: `[ ]` todo, `[x]` done.
 - [ ] **E3-1 Player shell: page background + overlay + feedback bar** (P0, M).
 - [ ] **E3-2 Fill-in player** (P0, M). Tap blank, type or pick tiles; instant check with hint after 2 misses. *(M1 target)*
 - [ ] **E3-3 True/False (tick) player** (P0, S).
-- [ ] **E3-4 Number-in-order player** (P0, M). Drag numbers onto pictures.
+- [ ] **E3-4 Number-in-order player** (P0, M). Drag numbers onto pictures. First version (type a number into a circle) is E9-12.
 - [ ] **E3-5 Matching (draw lines) player** (P0, L). Rope drag, snap, wiggle on wrong.
 - [ ] **E3-6 Multiple-choice (read and choose) player** (P1, M). Text read aloud.
 - [ ] **E3-7 Crossword player** (P1, L).

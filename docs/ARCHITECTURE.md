@@ -66,3 +66,12 @@ The **Lesson Pack** is the contract between import and play. It is plain Codable
 | No answer key | Unverified mode + parent confirm; AI-suggested keys flagged |
 | Copyright of books | Local processing of the user's own file only; nothing redistributed |
 | Child over-engagement | Calm session limits, no streak punishment |
+
+## Build tooling (no Xcode)
+
+The project builds with the Command Line Tools only:
+
+- Swift Package Manager builds the library and the SwiftUI app as an executable target; `build-app.sh` wraps the binary in `PagePals.app` (Info.plist + ad-hoc codesign).
+- PDFKit, Vision, SwiftUI and AVFoundation are part of the macOS SDK and available without Xcode.
+- XCTest ships only with Xcode, so logic checks run as the `PagePalsChecks` executable instead. If Xcode becomes available, they can be ported to XCTest or Swift Testing.
+- Not available without Xcode: Interface Builder, asset catalogs compiled by `actool` (use plain PNG/ICNS files in Resources), the SwiftUI previews canvas, and the iOS simulator.
