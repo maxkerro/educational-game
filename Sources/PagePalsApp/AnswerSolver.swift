@@ -73,7 +73,13 @@ struct ClaudeAnswerSolver {
     static func prompt(task: PlayTask, letters: [(String, TaskItem)]) -> String {
         var text = "This image is one task from a children's workbook. The task says: \"\(task.prompt)\". "
         text += "Every field the child has to fill in is marked with a red letter. "
-        if task.kind == .numberInOrder {
+        if task.kind == .trueFalse {
+            text = "This image is one task from a children's workbook. The task says: \"\(task.prompt)\". "
+            text += "Each sentence has a row of two circles on its right (the first column is headed \"correct\", the other \"wrong\"); "
+            text += "the sentence's row is marked with a red letter just left of its circles. "
+            text += "Look at the pictures (count the animals or objects) and decide whether each sentence is true for the picture. "
+            text += "Answer true if the sentence is correct, false if it is wrong."
+        } else if task.kind == .numberInOrder {
             text += "Each marked circle must get the number of the printed word list entry that its picture belongs to. "
             text += "Follow each circle's line to the object it points to, then read the numbered word list in the image. "
             text += "Every number is used once. Answer with whole numbers."
@@ -81,9 +87,11 @@ struct ClaudeAnswerSolver {
             text += "Work out the correct answer for each marked field (count things, follow lines, calculate). "
             text += "Write each answer as the book asks: a number word such as \"four\" when it says to write words, otherwise digits."
         }
-        let labelled = letters.compactMap { letter, item in item.label.map { "Field \(letter) is followed by the word \"\($0)\"." } }
+        let labelled = letters.compactMap { letter, item in
+            item.label.map { task.kind == .trueFalse ? "Row \(letter) is the sentence \"\($0) ...\" (it may continue with a picture)." : "Field \(letter) is followed by the word \"\($0)\"." }
+        }
         if !labelled.isEmpty { text += "\n" + labelled.joined(separator: " ") }
-        let example = letters.prefix(2).map { "\"\($0.0)\": " + (task.kind == .numberInOrder ? "1" : "\"four\"") }.joined(separator: ", ")
+        let example = letters.prefix(2).map { "\"\($0.0)\": " + (task.kind == .trueFalse ? "true" : task.kind == .numberInOrder ? "1" : "\"four\"") }.joined(separator: ", ")
         text += "\nReply with ONLY a JSON object that maps each letter to its answer, for example {\(example)}. No other text."
         return text
     }
@@ -124,7 +132,8 @@ struct ClaudeAnswerSolver {
             let x = (r.x * pageW - zoneRect.minX) * scale
             let yTop = (r.y * pageH - zoneRect.minY) * scale
             let rw = r.width * pageW * scale, rh = r.height * pageH * scale
-            let box = CGRect(x: x, y: Double(h) - yTop - rh, width: rw, height: rh)
+            var box = CGRect(x: x, y: Double(h) - yTop - rh, width: rw, height: rh)
+            if task.kind == .trueFalse { box.origin.x -= rw * 2.6 }   // letter just left of the two circles
 
             let letter = AnswerParser.letter(index)
             let fontSize = max(14, min(box.height * 0.85, 34))

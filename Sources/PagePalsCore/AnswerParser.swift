@@ -20,7 +20,16 @@ public enum AnswerParser {
         var key = AnswerKey()
         for (index, item) in items.enumerated() {
             guard let raw = object[letter(index)] else { throw AnswerParseError.incomplete }
-            if kind == .numberInOrder {
+            if kind == .trueFalse {
+                if let b = raw as? Bool {
+                    key.booleans[item.id] = b
+                } else if let word = (raw as? String)?.lowercased().trimmingCharacters(in: .whitespaces),
+                          ["true", "correct", "yes", "richtig"].contains(word) || ["false", "wrong", "no", "falsch"].contains(word) {
+                    key.booleans[item.id] = ["true", "correct", "yes", "richtig"].contains(word)
+                } else {
+                    throw AnswerParseError.incomplete
+                }
+            } else if kind == .numberInOrder {
                 if let n = raw as? Int {
                     key.order[item.id] = n
                 } else if let s = raw as? String, let n = Int(s.trimmingCharacters(in: .whitespaces)) {

@@ -18,6 +18,7 @@ struct TaskPlayerView: View {
     @State private var source: KeySource?
     @State private var answers: [String: String] = [:]
     @State private var submitted: Set<String> = []
+    @State private var ticks: [String: Bool] = [:]   // tick tasks: row id -> true = "correct" circle
     @State private var authoring = false
 
     init(task: PlayTask, page: CGImage, onSaveKey: @escaping (AnswerKey) -> Void) {
@@ -29,6 +30,7 @@ struct TaskPlayerView: View {
     }
 
     private var isNumberTask: Bool { task.kind == .numberInOrder }
+    private var isTickTask: Bool { task.kind == .trueFalse }
     private var zone: PageRect { task.region ?? PageRect(x: 0, y: 0, width: 1, height: 1) }
 
     /// Words are judged when the child has typed as many letters as the answer has, or pressed Return.
@@ -46,6 +48,7 @@ struct TaskPlayerView: View {
 
     private var response: AnswerKey {
         var response = AnswerKey()
+        if isTickTask { response.booleans = ticks; return response }
         for (id, text) in answers where isJudged(id) {
             if isNumberTask {
                 if let n = Int(text) { response.order[id] = n }
@@ -85,7 +88,11 @@ struct TaskPlayerView: View {
                     .overlay(GeometryReader { geo in
                         ForEach(task.items) { item in
                             if let r = item.region {
-                                slot(item, rect: r, in: geo.size)
+                                if isTickTask {
+                                    tickSlot(item, correct: r, wrong: item.secondRegion ?? r, in: geo.size)
+                                } else {
+                                    slot(item, rect: r, in: geo.size)
+                                }
                             }
                         }
                     })
@@ -120,9 +127,11 @@ struct TaskPlayerView: View {
     private var footer: some View {
         HStack(spacing: 12) {
             if authoring {
-                Text(isNumberTask ? "Grown-up: type the correct number into every circle, then save." : "Grown-up: type the correct answer into every box, then save.")
+                Text(isTickTask ? "Grown-up: tap the right circle in every row, then save."
+                     : isNumberTask ? "Grown-up: type the correct number into every circle, then save."
+                     : "Grown-up: type the correct answer into every box, then save.")
                 Spacer()
-                Button("Cancel") { authoring = false; answers = [:] }
+                Button("Cancel") { authoring = false; answers = [:]; ticks = [:] }
                 Button("Save answers") { saveKey() }
                     .buttonStyle(.borderedProminent)
                     .disabled(!allFilled)
@@ -134,7 +143,13 @@ struct TaskPlayerView: View {
                 Text("The correct answers are not saved yet. A grown-up can enter them once.")
                     .foregroundStyle(.secondary)
                 Spacer()
-                Button("Set answers (grown-up)") { authoring = true; answers = [:] }
+                Button("Set answers (grown-up)") { authoring = true; answers = [:]; ticks = [:] }
+            } else if isTickTask {
+                Text(source == .ai ? "Tap the right circle in each row. (The answers were found by AI and may be wrong.)"
+                                   : "Tap the right circle in each row.")
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button("Change answers (grown-up)") { authoring = true; answers = [:]; ticks = [:] }
             } else if isNumberTask {
                 Text(source == .ai ? "Type a number into each empty circle. (The answers were found by AI and may be wrong.)"
                                    : "Type a number into each empty circle.")
@@ -153,7 +168,8 @@ struct TaskPlayerView: View {
     }
 
     private var allFilled: Bool {
-        task.items.allSatisfy { item in
+        if isTickTask { return task.items.allSatisfy { ticks[$0.id] != nil } }
+        return task.items.allSatisfy { item in
             let given = answers[item.id] ?? ""
             return isNumberTask ? Int(given) != nil : !given.isEmpty
         }
@@ -161,7 +177,8 @@ struct TaskPlayerView: View {
 
     private func saveKey() {
         var newKey = AnswerKey()
-        for item in task.items {
+        if isTickTask { newKey.booleans = ticks }
+        for item in task.items where !isTickTask {
             let given = answers[item.id] ?? ""
             if isNumberTask {
                 if let n = Int(given) { newKey.order[item.id] = n }
@@ -174,6 +191,7 @@ struct TaskPlayerView: View {
         onSaveKey(newKey)
         authoring = false
         answers = [:]
+        ticks = [:]
     }
 
     @ViewBuilder
@@ -208,6 +226,42 @@ struct TaskPlayerView: View {
             .padding(.horizontal, h * 0.08)
         }
         .frame(width: w, height: h)
+        .position(x: cx, y: cy)
+    }
+
+    /// A row of two tappable circles on top of the printed grey ones: "correct" and "wrong".
+    @ViewBuilder
+    private func tickSlot(_ item: TaskItem, correct: PageRect, wrong: PageRect, in size: CGSize) -> some View {
+        let state = slotState(item.id)
+        ZStack {
+            tickCircle(item, side: true, rect: correct, in: size, state: state)
+            tickCircle(item, side: false, rect: wrong, in: size, state: state)
+        }
+    }
+
+    @ViewBuilder
+    private func tickCircle(_ item: TaskItem, side: Bool, rect r: PageRect, in size: CGSize, state: SlotState) -> some View {
+        let d = max(r.width / zone.width * size.width * 1.5, 26)
+        let cx = (r.x + r.width / 2 - zone.x) / zone.width * size.width
+        let cy = (r.y + r.height / 2 - zone.y) / zone.height * size.height
+        let chosen = ticks[item.id] == side
+
+        Button {
+            ticks[item.id] = side
+        } label: {
+            ZStack {
+                Circle().fill(chosen ? fill(for: state) : Color.white.opacity(0.01))
+                Circle().stroke(chosen ? stroke(for: state) : Color.accentColor.opacity(0.35), lineWidth: chosen ? 4 : 2)
+                if chosen {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: d * 0.6, weight: .heavy))
+                        .foregroundStyle(textColor(for: state))
+                }
+            }
+            .frame(width: d, height: d)
+            .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
         .position(x: cx, y: cy)
     }
 

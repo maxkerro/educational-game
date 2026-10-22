@@ -93,10 +93,11 @@ public enum TaskBuilder {
     /// that a parent confirms, until more task types are recognised.
     /// - Parameters:
     ///   - emptyCircles: boxes of empty circles found on the page
+    ///   - tickCircles: boxes of grey tick circles ("Correct or wrong? Tick.")
     ///   - blanks: boxes of grey answer bars; a bar right of a sum like "three + one =" becomes its blank
     ///   - idPrefix: makes task ids unique across pages, e.g. "p3"
     ///   - pageAspect: page width / height; above 1.2 the page is read as a two-page spread
-    public static func buildTasks(lines: [PageText], emptyCircles: [PageRect], blanks: [PageRect] = [], idPrefix: String, pageAspect: Double = 0.7) -> [PlayTask] {
+    public static func buildTasks(lines: [PageText], emptyCircles: [PageRect], blanks: [PageRect] = [], tickCircles: [PageRect] = [], idPrefix: String, pageAspect: Double = 0.7) -> [PlayTask] {
         var tasks: [PlayTask] = []
         for (index, zone) in zones(from: lines, pageAspect: pageAspect).enumerated() {
             let inside = emptyCircles
@@ -111,7 +112,9 @@ public enum TaskBuilder {
             // "Tick" tasks have circles too, but they are not number slots
             let isTick = zone.title.lowercased().contains("tick")
 
-            if inside.count >= 2 && !isTick {
+            if isTick, let tick = tickTask(id: id, prompt: prompt, zone: zone, lines: lines, circles: tickCircles) {
+                tasks.append(tick)
+            } else if inside.count >= 2 && !isTick {
                 let items = inside.enumerated().map { TaskItem(id: "\(id)-slot\($0.offset + 1)", region: $0.element) }
                 tasks.append(PlayTask(id: id, kind: .numberInOrder, prompt: prompt, region: zone.box, items: items, key: nil, confidence: 0.7))
             } else if !isTick, let fill = sumsTask(id: id, prompt: prompt, zone: zone, lines: lines, blanks: blanks) {
@@ -176,6 +179,51 @@ public enum TaskBuilder {
             return TaskItem(id: "\(id)-b\(index + 1)", label: label, region: bar)
         }
         return PlayTask(id: id, kind: .fillIn, prompt: prompt, region: zone.box, items: items, key: nil, confidence: 0.5)
+    }
+
+    /// "Correct or wrong? Tick.": grey circles in two columns, one row per sentence. The column headed
+    /// "correct" (printed above it) is the "correct" column; without a header the left column is "correct".
+    /// The answers are not known here; the AI step or a grown-up provides them.
+    private static func tickTask(id: String, prompt: String, zone: TaskZone, lines: [PageText], circles: [PageRect]) -> PlayTask? {
+        let inside = circles.filter { contains(zone.box, centreOf: $0) }
+        guard inside.count >= 4 else { return nil }
+
+        // split into two columns at the biggest horizontal gap between circle centres
+        let byX = inside.sorted { $0.x < $1.x }
+        var gapIndex = 0
+        var gap = -1.0
+        for i in 1..<byX.count where byX[i].x - byX[i - 1].x > gap {
+            gap = byX[i].x - byX[i - 1].x
+            gapIndex = i
+        }
+        var left = Array(byX[..<gapIndex]).sorted { $0.y < $1.y }
+        var right = Array(byX[gapIndex...]).sorted { $0.y < $1.y }
+        guard left.count == right.count, left.count >= 2, gap > 0.02 else { return nil }
+
+        // which column is "correct"?
+        func headerX(_ word: String) -> Double? {
+            lines.first { contains(zone.box, centreOf: $0.box) && $0.text.lowercased().trimmingCharacters(in: CharacterSet.punctuationCharacters.union(.whitespaces)) == word }
+                .map { $0.box.x + $0.box.width / 2 }
+        }
+        let leftX = left.map { $0.x + $0.width / 2 }.reduce(0, +) / Double(left.count)
+        let rightX = right.map { $0.x + $0.width / 2 }.reduce(0, +) / Double(right.count)
+        if let correctX = headerX("correct"), let wrongX = headerX("wrong"), abs(correctX - rightX) + abs(wrongX - leftX) < abs(correctX - leftX) + abs(wrongX - rightX) {
+            swap(&left, &right)   // the right-hand column is "correct"
+        }
+
+        let items = left.indices.map { row -> TaskItem in
+            let correct = left[row], wrong = right[row]
+            let centreY = correct.y + correct.height / 2
+            let sentence = lines
+                .filter { line in
+                    abs(line.box.y + line.box.height / 2 - centreY) < max(line.box.height, correct.height) * 1.2
+                        && line.box.x + line.box.width <= min(correct.x, wrong.x) + 0.02
+                        && contains(zone.box, centreOf: line.box)
+                }
+                .max(by: { $0.box.x + $0.box.width < $1.box.x + $1.box.width })?.text
+            return TaskItem(id: "\(id)-r\(row + 1)", label: sentence, region: correct, secondRegion: wrong)
+        }
+        return PlayTask(id: id, kind: .trueFalse, prompt: prompt, region: zone.box, items: items, key: nil, confidence: 0.6)
     }
 
     private static func contains(_ outer: PageRect, centreOf inner: PageRect) -> Bool {

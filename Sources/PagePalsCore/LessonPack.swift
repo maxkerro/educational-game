@@ -34,8 +34,11 @@ public struct TaskItem: Codable, Equatable, Identifiable, Sendable {
     public var region: PageRect?
     /// Picture cut out of the book page for this item (file name inside the pack). Shown as in the book.
     public var imageFile: String?
+    /// Tick tasks: `region` is the "correct" circle of a row and this is its "wrong" circle.
+    public var secondRegion: PageRect?
 
-    public init(id: String, label: String? = nil, region: PageRect? = nil, imageFile: String? = nil) {
+    public init(id: String, label: String? = nil, region: PageRect? = nil, imageFile: String? = nil, secondRegion: PageRect? = nil) {
+        self.secondRegion = secondRegion
         self.id = id
         self.label = label
         self.region = region

@@ -105,7 +105,7 @@ struct ImportView: View {
                             Text(taskSummary(task)).font(.caption).foregroundStyle(.secondary)
                             HStack {
                                 Button("Play") { playing = task }
-                                    .disabled(task.kind != .numberInOrder && task.kind != .fillIn)
+                                    .disabled(task.kind != .numberInOrder && task.kind != .fillIn && task.kind != .trueFalse)
                                 if model.canSolve(task) {
                                     Button("Find answers (AI)") {
                                         if AISettings.shared.isReady { model.solve(task) } else { showAISettings = true }
@@ -178,6 +178,8 @@ struct ImportView: View {
         switch task.kind {
         case .numberInOrder:
             return "Numbers into \(task.items.count) circles" + keyNote(task)
+        case .trueFalse:
+            return "Tick correct or wrong in \(task.items.count) rows" + keyNote(task)
         case .fillIn:
             return "Fill in \(task.items.count) answers" + keyNote(task)
         default:

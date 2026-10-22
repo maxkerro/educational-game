@@ -206,5 +206,37 @@ do {
     check((try? AnswerParser.parse(reply: "I cannot tell.", kind: .numberInOrder, items: items)) == nil, "AI reply: no JSON is rejected")
 }
 
+// Tick task: two columns of grey circles, header words decide which column is "correct"
+do {
+    let lines = [
+        PageText(text: "6. Correct or wrong? Tick.", box: PageRect(x: 0.05, y: 0.45, width: 0.2, height: 0.03)),
+        PageText(text: "correct", box: PageRect(x: 0.33, y: 0.70, width: 0.04, height: 0.02)),
+        PageText(text: "wrong", box: PageRect(x: 0.38, y: 0.70, width: 0.03, height: 0.02)),
+        PageText(text: "There are two", box: PageRect(x: 0.20, y: 0.80, width: 0.08, height: 0.02)),
+        PageText(text: "There is one", box: PageRect(x: 0.20, y: 0.85, width: 0.07, height: 0.02))
+    ]
+    func circle(_ x: Double, _ y: Double) -> PageRect { PageRect(x: x, y: y, width: 0.012, height: 0.017) }
+    let ticks = [circle(0.34, 0.80), circle(0.34, 0.85), circle(0.39, 0.80), circle(0.39, 0.85)]
+    let tasks = TaskBuilder.buildTasks(lines: lines, emptyCircles: [], tickCircles: ticks, idPrefix: "p2")
+    check(tasks.count == 1 && tasks[0].kind == .trueFalse && tasks[0].items.count == 2, "tick task: two rows")
+    if let task = tasks.first {
+        check(task.items[0].label == "There are two", "tick task: sentence found left of the row")
+        check(task.items[0].region?.x == 0.34 && task.items[0].secondRegion?.x == 0.39, "tick task: left column is correct")
+        var withKey = task
+        withKey.key = AnswerKey(booleans: [task.items[0].id: false, task.items[1].id: true])
+        let r = TaskEvaluator.evaluate(task: withKey, response: AnswerKey(booleans: [task.items[0].id: false, task.items[1].id: false]))
+        check(r.correct == [task.items[0].id] && r.incorrect == [task.items[1].id], "tick task: rows are judged separately")
+    }
+    let swapped = [circle(0.34, 0.80), circle(0.34, 0.85), circle(0.39, 0.80), circle(0.39, 0.85)]
+    let flipped = [lines[0], PageText(text: "wrong", box: PageRect(x: 0.33, y: 0.70, width: 0.04, height: 0.02)),
+                   PageText(text: "correct", box: PageRect(x: 0.38, y: 0.70, width: 0.04, height: 0.02)), lines[3], lines[4]]
+    let other = TaskBuilder.buildTasks(lines: flipped, emptyCircles: [], tickCircles: swapped, idPrefix: "p2")
+    check(other.first?.items.first?.region?.x == 0.39, "tick task: header 'correct' over the right column swaps the columns")
+
+    let items = (1...2).map { TaskItem(id: "r\($0)") }
+    let parsed = try? AnswerParser.parse(reply: "{\"A\": true, \"B\": \"wrong\"}", kind: .trueFalse, items: items)
+    check(parsed?.booleans == ["r1": true, "r2": false], "AI reply: true/false and words for tick tasks")
+}
+
 print(failures == 0 ? "\nAll checks passed." : "\n\(failures) check(s) failed.")
 exit(failures == 0 ? 0 : 1)

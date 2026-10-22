@@ -69,7 +69,7 @@ final class ImportModel: ObservableObject {
         status = "Reading page \(index + 1) ..."
 
         Task {
-            let outcome = await Task.detached(priority: .userInitiated) { () -> Result<(CGImage, [RecognizedLine], [PageRegion], [PageRect], [PageRect]), Error> in
+            let outcome = await Task.detached(priority: .userInitiated) { () -> Result<(CGImage, [RecognizedLine], [PageRegion], [PageRect], [PageRect], [PageRect]), Error> in
                 Result {
                     let rendered = try book.renderPage(index)
                     let found = try PageOCR.recognize(rendered)
@@ -78,12 +78,13 @@ final class ImportModel: ObservableObject {
                     let regions = PictureFinder.find(in: rendered, textWords: words)
                     let circles = CircleFinder.findEmpty(in: rendered, textWords: words)
                     let bars = BlankFinder.find(in: rendered)
-                    return (rendered, found, regions, circles, bars)
+                    let ticks = TickFinder.find(in: rendered)
+                    return (rendered, found, regions, circles, bars, ticks)
                 }
             }.value
 
             switch outcome {
-            case .success(let (rendered, found, foundRegions, foundCircles, foundBars)):
+            case .success(let (rendered, found, foundRegions, foundCircles, foundBars, foundTicks)):
                 image = NSImage(cgImage: rendered, size: NSSize(width: rendered.width, height: rendered.height))
                 lines = found
                 regions = foundRegions
@@ -97,6 +98,7 @@ final class ImportModel: ObservableObject {
                         lines: found.map { PageText(text: $0.text, box: $0.box) },
                         emptyCircles: foundCircles,
                         blanks: foundBars,
+                        tickCircles: foundTicks,
                         idPrefix: "p\(index + 1)",
                         pageAspect: Double(rendered.width) / Double(rendered.height)
                     )
@@ -111,9 +113,9 @@ final class ImportModel: ObservableObject {
                         }
                         return task
                     }
-                solveMissingAnswers()
                 let pictureCount = foundRegions.filter { $0.kind == .picture }.count
-                status = "Page \(index + 1) of \(book.pageCount): \(found.count) text lines, \(pictureCount) pictures, \(foundCircles.count) empty circles, \(tasks.count) task(s)"
+                status = "Page \(index + 1) of \(book.pageCount): \(found.count) text lines, \(pictureCount) pictures, \(foundCircles.count) empty circles, \(foundTicks.count) tick circles, \(tasks.count) task(s)"
+                solveMissingAnswers()
             case .failure(let error):
                 status = "Could not read page \(index + 1): \(error.localizedDescription)"
             }
@@ -133,7 +135,7 @@ final class ImportModel: ObservableObject {
 
     /// Tasks the AI can work out: number circles and write-the-answer boxes without a key yet.
     func canSolve(_ task: PlayTask) -> Bool {
-        task.key == nil && !task.items.isEmpty && (task.kind == .numberInOrder || task.kind == .fillIn)
+        task.key == nil && !task.items.isEmpty && (task.kind == .numberInOrder || task.kind == .fillIn || task.kind == .trueFalse)
     }
 
     /// When AI answers are switched on, finds the answers for every task on this page that has none.

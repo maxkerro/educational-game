@@ -24,51 +24,8 @@ public enum CircleFinder {
         var norm = [Float](repeating: 1, count: n)
         for i in 0..<n { norm[i] = Float(bmp.mx[i]) / (bg[i] + 1) }
 
-        // Sobel gradient
         let rMin = 10, rMax = 36
-        var acc = [Float](repeating: 0, count: n)
-        if w < 4 || h < 4 { return [] }
-        for y in 1..<(h - 1) {
-            for x in 1..<(w - 1) {
-                let i = y * w + x
-                let a = norm[i - w - 1], b = norm[i - w], c = norm[i - w + 1]
-                let d = norm[i - 1], f = norm[i + 1]
-                let g = norm[i + w - 1], hh = norm[i + w], k = norm[i + w + 1]
-                let gx = (c + 2 * f + k) - (a + 2 * d + g)
-                let gy = (g + 2 * hh + k) - (a + 2 * b + c)
-                let mag = (gx * gx + gy * gy).squareRoot()
-                if mag < 0.35 { continue }
-                let ux = gx / mag, uy = gy / mag
-                var r = rMin
-                while r <= rMax {
-                    let fr = Float(r)
-                    for sign: Float in [1, -1] {
-                        let cx = Int((Float(x) + sign * ux * fr).rounded())
-                        let cy = Int((Float(y) + sign * uy * fr).rounded())
-                        if cx >= 0 && cx < w && cy >= 0 && cy < h { acc[cy * w + cx] += 1 }
-                    }
-                    r += 2
-                }
-            }
-        }
-        let smooth = blur5(acc, w, h)
-
-        // Peaks: local maxima in a 25 x 25 window above a vote threshold
-        var peaks: [(x: Int, y: Int)] = []
-        let voteThreshold: Float = 16
-        for y in 0..<h {
-            for x in 0..<w where smooth[y * w + x] > voteThreshold {
-                let v = smooth[y * w + x]
-                var isMax = true
-                search: for yy in max(0, y - 12)...min(h - 1, y + 12) {
-                    for xx in max(0, x - 12)...min(w - 1, x + 12) {
-                        let o = smooth[yy * w + xx]
-                        if o > v || (o == v && (yy < y || (yy == y && xx < x))) { isMax = false; break search }
-                    }
-                }
-                if isMax { peaks.append((x, y)) }
-            }
-        }
+        let peaks = HoughCircles.peaks(norm: norm, w: w, h: h, rMin: rMin, rMax: rMax, edge: 0.35, vote: 16)
 
         // Verify each peak: closed ring, empty inside
         struct Circle { let x: Int; let y: Int; let r: Int; let coverage: Double }
@@ -154,33 +111,5 @@ public enum CircleFinder {
                 height: Double(2 * c.r) / Double(h)
             )
         }
-    }
-
-    /// 5 x 5 box average, separable.
-    private static func blur5(_ src: [Float], _ w: Int, _ h: Int) -> [Float] {
-        var tmp = [Float](repeating: 0, count: w * h)
-        for y in 0..<h {
-            let row = y * w
-            for x in 0..<w {
-                var s: Float = 0
-                for dx in -2...2 {
-                    let xx = x + dx
-                    if xx >= 0 && xx < w { s += src[row + xx] }
-                }
-                tmp[row + x] = s / 5
-            }
-        }
-        var out = [Float](repeating: 0, count: w * h)
-        for y in 0..<h {
-            for x in 0..<w {
-                var s: Float = 0
-                for dy in -2...2 {
-                    let yy = y + dy
-                    if yy >= 0 && yy < h { s += tmp[yy * w + x] }
-                }
-                out[y * w + x] = s / 5
-            }
-        }
-        return out
     }
 }
