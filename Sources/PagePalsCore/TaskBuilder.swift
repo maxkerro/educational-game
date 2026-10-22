@@ -150,7 +150,7 @@ public enum TaskBuilder {
             items.append(TaskItem(id: itemID, label: pair.line.text, region: pair.bar))
             key.text[itemID] = pair.answer
         }
-        return PlayTask(id: id, kind: .fillIn, prompt: prompt, region: zone.box, items: items, key: key, confidence: 0.8)
+        return PlayTask(id: id, kind: .fillIn, prompt: prompt, region: zone.box, items: items, key: key, confidence: 0.8, keySource: .calculated)
     }
 
     /// A zone with two or more grey answer bars but no sums: a write-the-answer task. The answers are

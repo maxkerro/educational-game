@@ -69,6 +69,13 @@ public struct AnswerKey: Codable, Equatable, Sendable {
 /// The child's answers; same shape as the key.
 public typealias TaskResponse = AnswerKey
 
+/// Where a task's answer key came from.
+public enum KeySource: String, Codable, Sendable {
+    case calculated   // worked out from the page text, e.g. "three + one ="
+    case ai           // found by an AI model looking at the task; may be wrong
+    case parent       // typed in by a grown-up
+}
+
 public struct PlayTask: Codable, Equatable, Identifiable, Sendable {
     public var id: String
     public var kind: TaskKind
@@ -79,6 +86,8 @@ public struct PlayTask: Codable, Equatable, Identifiable, Sendable {
     public var key: AnswerKey?
     /// Import confidence 0...1; low values go to the parent review queue.
     public var confidence: Double
+    /// How `key` was found; `nil` when there is no key.
+    public var keySource: KeySource?
 
     public init(
         id: String,
@@ -87,8 +96,10 @@ public struct PlayTask: Codable, Equatable, Identifiable, Sendable {
         region: PageRect? = nil,
         items: [TaskItem] = [],
         key: AnswerKey? = nil,
-        confidence: Double = 1.0
+        confidence: Double = 1.0,
+        keySource: KeySource? = nil
     ) {
+        self.keySource = keySource
         self.id = id
         self.kind = kind
         self.prompt = prompt

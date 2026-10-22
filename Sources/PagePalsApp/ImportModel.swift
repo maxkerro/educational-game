@@ -28,6 +28,8 @@ final class ImportModel: ObservableObject {
     private var book: PDFBook?
     private var bookName = "book"
     private var keys: [String: AnswerKey] = [:]
+    private var aiKeys: [String: AnswerKey] = [:]
+    @Published private(set) var solving: Set<String> = []
 
     var canGoBack: Bool { book != nil && pageIndex > 0 && !isWorking }
     var canGoForward: Bool { book != nil && pageIndex < pageCount - 1 && !isWorking }
@@ -40,6 +42,7 @@ final class ImportModel: ObservableObject {
             book = opened
             bookName = url.lastPathComponent
             keys = KeyStore.load(book: bookName)
+            aiKeys = KeyStore.load(book: bookName, kind: "ai")
             pageCount = opened.pageCount
             pageIndex = 0
             image = nil
@@ -99,9 +102,16 @@ final class ImportModel: ObservableObject {
                     )
                     .map { task in
                         var task = task
-                        if let saved = keys[task.id] { task.key = saved }
+                        if let saved = keys[task.id] {
+                            task.key = saved
+                            task.keySource = .parent
+                        } else if task.key == nil, let guess = aiKeys[task.id] {
+                            task.key = guess
+                            task.keySource = .ai
+                        }
                         return task
                     }
+                solveMissingAnswers()
                 let pictureCount = foundRegions.filter { $0.kind == .picture }.count
                 status = "Page \(index + 1) of \(book.pageCount): \(found.count) text lines, \(pictureCount) pictures, \(foundCircles.count) empty circles, \(tasks.count) task(s)"
             case .failure(let error):
@@ -115,7 +125,48 @@ final class ImportModel: ObservableObject {
     func saveKey(_ key: AnswerKey, for taskID: String) {
         keys[taskID] = key
         KeyStore.save(keys, book: bookName)
-        if let i = tasks.firstIndex(where: { $0.id == taskID }) { tasks[i].key = key }
+        if let i = tasks.firstIndex(where: { $0.id == taskID }) {
+            tasks[i].key = key
+            tasks[i].keySource = .parent
+        }
+    }
+
+    /// Tasks the AI can work out: number circles and write-the-answer boxes without a key yet.
+    func canSolve(_ task: PlayTask) -> Bool {
+        task.key == nil && !task.items.isEmpty && (task.kind == .numberInOrder || task.kind == .fillIn)
+    }
+
+    /// When AI answers are switched on, finds the answers for every task on this page that has none.
+    private func solveMissingAnswers() {
+        guard AISettings.shared.isReady else { return }
+        for task in tasks where canSolve(task) { solve(task) }
+    }
+
+    /// Asks the AI for the answers of one task. The result is a guess (`KeySource.ai`) that a grown-up can correct.
+    func solve(_ task: PlayTask) {
+        guard let page = pageBitmap, !solving.contains(task.id) else { return }
+        let settings = AISettings.shared
+        let apiKey = settings.effectiveKey
+        guard !apiKey.isEmpty else { status = "Add an API key under \"AI answers\" first."; return }
+        solving.insert(task.id)
+        status = "Finding answers for \"\(task.prompt)\" ..."
+
+        let solver = ClaudeAnswerSolver(apiKey: apiKey, model: settings.model)
+        Task {
+            do {
+                let found = try await solver.solve(task: task, page: page)
+                aiKeys[task.id] = found
+                KeyStore.save(aiKeys, book: bookName, kind: "ai")
+                if let i = tasks.firstIndex(where: { $0.id == task.id }), tasks[i].key == nil {
+                    tasks[i].key = found
+                    tasks[i].keySource = .ai
+                }
+                status = "Answers found for \"\(task.prompt)\" (AI guess, please check)."
+            } catch {
+                status = "Could not find answers for \"\(task.prompt)\": \(error.localizedDescription)"
+            }
+            solving.remove(task.id)
+        }
     }
 
     /// Crops every picture region (with a small margin) out of the page bitmap.

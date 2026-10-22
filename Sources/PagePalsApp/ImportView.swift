@@ -10,6 +10,7 @@ struct ImportView: View {
     @StateObject private var model = ImportModel()
     @State private var showImporter = false
     @State private var playing: PlayTask?
+    @State private var showAISettings = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -27,6 +28,7 @@ struct ImportView: View {
                 TaskPlayerView(task: task, page: page) { model.saveKey($0, for: task.id) }
             }
         }
+        .sheet(isPresented: $showAISettings) { AISettingsView() }
         .fileImporter(isPresented: $showImporter, allowedContentTypes: [.pdf]) { result in
             if case .success(let url) = result { model.open(url: url) }
         }
@@ -37,7 +39,8 @@ struct ImportView: View {
             Button("Open PDF\u{2026}") { showImporter = true }
             Button("Previous") { model.previous() }.disabled(!model.canGoBack)
             Button("Next") { model.next() }.disabled(!model.canGoForward)
-            if model.isWorking { ProgressView().controlSize(.small) }
+            Button("AI answers\u{2026}") { showAISettings = true }
+            if model.isWorking || !model.solving.isEmpty { ProgressView().controlSize(.small) }
             Text(model.status)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
@@ -100,8 +103,16 @@ struct ImportView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(task.prompt).fontWeight(.medium)
                             Text(taskSummary(task)).font(.caption).foregroundStyle(.secondary)
-                            Button("Play") { playing = task }
-                                .disabled(task.kind != .numberInOrder && task.kind != .fillIn)
+                            HStack {
+                                Button("Play") { playing = task }
+                                    .disabled(task.kind != .numberInOrder && task.kind != .fillIn)
+                                if model.canSolve(task) {
+                                    Button("Find answers (AI)") {
+                                        if AISettings.shared.isReady { model.solve(task) } else { showAISettings = true }
+                                    }
+                                    .disabled(model.solving.contains(task.id))
+                                }
+                            }
                         }
                         .padding(8)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -154,12 +165,21 @@ struct ImportView: View {
         ))
     }
 
+    private func keyNote(_ task: PlayTask) -> String {
+        switch task.keySource {
+        case .calculated: return " (answers calculated)"
+        case .ai: return " (answers: AI guess, please check)"
+        case .parent: return " (answers set by a grown-up)"
+        case nil: return " (answers not set)"
+        }
+    }
+
     private func taskSummary(_ task: PlayTask) -> String {
         switch task.kind {
         case .numberInOrder:
-            return "Numbers into \(task.items.count) circles" + (task.key == nil ? " (answers not set)" : "")
+            return "Numbers into \(task.items.count) circles" + keyNote(task)
         case .fillIn:
-            return "Fill in \(task.items.count) answers" + (task.key == nil ? " (answers not set)" : "")
+            return "Fill in \(task.items.count) answers" + keyNote(task)
         default:
             return "Not recognised yet: a grown-up confirms"
         }
@@ -167,5 +187,47 @@ struct ImportView: View {
 
     private func textColor(_ line: RecognizedLine) -> Color {
         line.confidence >= 0.8 ? .green : .orange
+    }
+}
+
+/// Opt-in switch and key for AI-found answers. Off by default.
+struct AISettingsView: View {
+    @ObservedObject private var settings = AISettings.shared
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("AI answers").font(.title2.weight(.semibold))
+            Text("PagePals can find the correct answers of a task by itself, so a grown-up does not have to type them. "
+                 + "When this is on, the picture of one task (a part of one book page, with letters drawn into the empty fields) "
+                 + "and its instruction text are sent to Anthropic's API using your key. Nothing else is sent. "
+                 + "Answers found this way are marked as an AI guess and a grown-up can correct them. "
+                 + "Sums such as \"three + one =\" are always calculated on this Mac, without AI.")
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Toggle("Let the AI find answers while importing", isOn: $settings.enabled)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Anthropic API key").font(.headline)
+                SecureField("sk-ant-...", text: $settings.apiKey)
+                    .textFieldStyle(.roundedBorder)
+                Text("Kept in the macOS Keychain. If empty, the ANTHROPIC_API_KEY environment variable is used.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Model").font(.headline)
+                TextField("claude-sonnet-5-5", text: $settings.model)
+                    .textFieldStyle(.roundedBorder)
+            }
+
+            HStack {
+                Spacer()
+                Button("Done") { dismiss() }.buttonStyle(.borderedProminent)
+            }
+        }
+        .padding(20)
+        .frame(width: 520)
     }
 }
