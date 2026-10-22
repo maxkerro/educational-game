@@ -8,7 +8,8 @@ import PagePalsCore
 ///  1. page brightness relative to the paper (same normalisation as `PictureFinder`)
 ///  2. edge pixels with their gradient direction; each edge pixel votes for circle centres
 ///     at distance r along the gradient, for r in a radius range
-///  3. every peak is checked: the ring is closed (>= 80% of directions have ink) and the inside is paper
+///  3. every peak is checked: the ring is closed (>= 95% of directions have ink), the inside is paper and the
+///     outside is clean paper (>= 90% of directions); this removes loops in scribbled lines
 ///  4. circles whose size differs a lot from the typical size are dropped (buttons, eyes in drawings)
 public enum CircleFinder {
     public static func findEmpty(in image: CGImage, textWords: [PageRect] = []) -> [PageRect] {
@@ -108,6 +109,23 @@ public enum CircleFinder {
                 }
             }
             if total == 0 || Double(dark) / Double(total) > 0.03 { continue }
+
+            // A real answer circle is closed and stands on clean paper (apart from a pointer line);
+            // loops in scribbled lines have gaps and ink right outside the ring.
+            if bestCoverage < 0.95 { continue }
+            var clean = 0
+            for k in 0..<72 {
+                let ang = 2 * Double.pi * Double(k) / 72
+                var paper = true
+                for d in 5...8 {
+                    let rr = Double(bestR + d)
+                    let px = p.x + Int((rr * cos(ang)).rounded())
+                    let py = p.y + Int((rr * sin(ang)).rounded())
+                    if px >= 0 && px < w && py >= 0 && py < h && norm[py * w + px] < 0.9 { paper = false; break }
+                }
+                if paper { clean += 1 }
+            }
+            if Double(clean) / 72 < 0.9 { continue }
             circles.append(Circle(x: p.x, y: p.y, r: bestR, coverage: bestCoverage))
         }
 

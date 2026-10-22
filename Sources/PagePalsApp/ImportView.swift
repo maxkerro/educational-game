@@ -159,7 +159,7 @@ struct ImportView: View {
         case .numberInOrder:
             return "Numbers into \(task.items.count) circles" + (task.key == nil ? " (answers not set)" : "")
         case .fillIn:
-            return "Fill in \(task.items.count) answers (calculated)"
+            return "Fill in \(task.items.count) answers" + (task.key == nil ? " (answers not set)" : "")
         default:
             return "Not recognised yet: a grown-up confirms"
         }

@@ -116,6 +116,8 @@ public enum TaskBuilder {
                 tasks.append(PlayTask(id: id, kind: .numberInOrder, prompt: prompt, region: zone.box, items: items, key: nil, confidence: 0.7))
             } else if !isTick, let fill = sumsTask(id: id, prompt: prompt, zone: zone, lines: lines, blanks: blanks) {
                 tasks.append(fill)
+            } else if !isTick, let fill = answerBarsTask(id: id, prompt: prompt, zone: zone, lines: lines, blanks: blanks) {
+                tasks.append(fill)
             } else {
                 tasks.append(PlayTask(id: id, kind: .openTask, prompt: prompt, region: zone.box, items: [], key: nil, confidence: 0.3))
             }
@@ -149,6 +151,31 @@ public enum TaskBuilder {
             key.text[itemID] = pair.answer
         }
         return PlayTask(id: id, kind: .fillIn, prompt: prompt, region: zone.box, items: items, key: key, confidence: 0.8)
+    }
+
+    /// A zone with two or more grey answer bars but no sums: a write-the-answer task. The answers are
+    /// not known, so a grown-up types them once. The word printed right of a bar ("lollies") is its label.
+    private static func answerBarsTask(id: String, prompt: String, zone: TaskZone, lines: [PageText], blanks: [PageRect]) -> PlayTask? {
+        let bars = blanks
+            .filter { contains(zone.box, centreOf: $0) }
+            .sorted { a, b in
+                let rowA = (a.y * 40).rounded(), rowB = (b.y * 40).rounded()
+                return rowA == rowB ? a.x < b.x : a.y < b.y
+            }
+        guard bars.count >= 2 else { return nil }
+
+        let items = bars.enumerated().map { index, bar -> TaskItem in
+            let barCentreY = bar.y + bar.height / 2
+            let label = lines
+                .filter { line in
+                    abs(line.box.y + line.box.height / 2 - barCentreY) < max(line.box.height, bar.height)
+                        && line.box.x >= bar.x + bar.width - 0.01
+                        && line.box.x - (bar.x + bar.width) < 0.05
+                }
+                .min(by: { $0.box.x < $1.box.x })?.text
+            return TaskItem(id: "\(id)-b\(index + 1)", label: label, region: bar)
+        }
+        return PlayTask(id: id, kind: .fillIn, prompt: prompt, region: zone.box, items: items, key: nil, confidence: 0.5)
     }
 
     private static func contains(_ outer: PageRect, centreOf inner: PageRect) -> Bool {

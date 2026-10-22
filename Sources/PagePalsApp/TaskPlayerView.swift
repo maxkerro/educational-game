@@ -118,7 +118,7 @@ struct TaskPlayerView: View {
     private var footer: some View {
         HStack(spacing: 12) {
             if authoring {
-                Text("Grown-up: type the correct number into every circle, then save.")
+                Text(isNumberTask ? "Grown-up: type the correct number into every circle, then save." : "Grown-up: type the correct answer into every box, then save.")
                 Spacer()
                 Button("Cancel") { authoring = false; answers = [:] }
                 Button("Save answers") { saveKey() }
@@ -129,7 +129,7 @@ struct TaskPlayerView: View {
                 Spacer()
                 Button("Done") { dismiss() }.buttonStyle(.borderedProminent)
             } else if key == nil {
-                Text("The correct numbers are not saved yet. A grown-up can enter them once.")
+                Text("The correct answers are not saved yet. A grown-up can enter them once.")
                     .foregroundStyle(.secondary)
                 Spacer()
                 Button("Set answers (grown-up)") { authoring = true; answers = [:] }
@@ -141,19 +141,29 @@ struct TaskPlayerView: View {
                 Text("Write the answer into each grey box. A number or a word is fine.")
                     .foregroundStyle(.secondary)
                 Spacer()
+                Button("Change answers (grown-up)") { authoring = true; answers = [:] }
             }
         }
         .padding(12)
     }
 
     private var allFilled: Bool {
-        task.items.allSatisfy { Int(answers[$0.id] ?? "") != nil }
+        task.items.allSatisfy { item in
+            let given = answers[item.id] ?? ""
+            return isNumberTask ? Int(given) != nil : !given.isEmpty
+        }
     }
 
     private func saveKey() {
-        var order: [String: Int] = [:]
-        for item in task.items { if let n = Int(answers[item.id] ?? "") { order[item.id] = n } }
-        let newKey = AnswerKey(order: order)
+        var newKey = AnswerKey()
+        for item in task.items {
+            let given = answers[item.id] ?? ""
+            if isNumberTask {
+                if let n = Int(given) { newKey.order[item.id] = n }
+            } else if !given.isEmpty {
+                newKey.text[item.id] = given
+            }
+        }
         key = newKey
         onSaveKey(newKey)
         authoring = false

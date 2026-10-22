@@ -178,5 +178,21 @@ do {
     }
 }
 
+// Answer bars without sums: a write-the-answer task with an unknown key
+do {
+    let lines = [
+        PageText(text: "4. How many lollies? Trace the lines and write.", box: PageRect(x: 0.05, y: 0.05, width: 0.5, height: 0.03)),
+        PageText(text: "lollies", box: PageRect(x: 0.40, y: 0.80, width: 0.06, height: 0.03))
+    ]
+    let bars = [
+        PageRect(x: 0.15, y: 0.80, width: 0.25, height: 0.02),
+        PageRect(x: 0.15, y: 0.90, width: 0.25, height: 0.02)
+    ]
+    let tasks = TaskBuilder.buildTasks(lines: lines, emptyCircles: [], blanks: bars, idPrefix: "p1")
+    check(tasks.count == 1 && tasks[0].kind == .fillIn && tasks[0].items.count == 2, "answer bars: fill-in task")
+    check(tasks.first?.key == nil, "answer bars: key is not known")
+    check(tasks.first?.items.first?.label == "lollies", "answer bars: word right of the bar is the label")
+}
+
 print(failures == 0 ? "\nAll checks passed." : "\n\(failures) check(s) failed.")
 exit(failures == 0 ? 0 : 1)
