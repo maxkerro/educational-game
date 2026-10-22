@@ -49,6 +49,10 @@ Stories: **73** · ✅ done **13** · 🟡 partly **8** · ⬜ to do **52**
 - **Parent / grown-up**: loads the books, wants to type as little as possible, stays in control.
 - **Maintainer**: builds and releases the app.
 
+## Test machine
+
+MacBook Pro 14-inch (2023), Apple M2 Max, 32 GB memory, macOS 15.8. The app targets macOS 14 or newer.
+
 ## Offline AI options
 
 Order of methods, from simple to heavy; each step works without the internet:
@@ -56,9 +60,9 @@ Order of methods, from simple to heavy; each step works without the internet:
 1. **Rules and calculation:** sums, number words, answer pages, crossword fitting, word-search scanning (D1–D5).
 2. **Classic on-device ML:** Apple Vision (text, shapes), Natural Language (word similarity, en/de), an image-text model in Core ML such as [MobileCLIP](https://github.com/apple/ml-mobileclip) to match pictures to words (D6).
 3. **Optional local language / vision model** for reading, grammar and counting (D7, D8). Candidates, to be measured in spike D9:
-   - **Apple Foundation Models framework:** the on-device model accepts image input in the newest OS generation, runs on the Mac without a server ([WWDC26 session](https://developer-rno.apple.com/videos/play/wwdc2026/241), [overview](https://callstack.com/blog/on-device-ai-after-wwdc-2026-whats-new)). Needs the newest macOS and a Mac that supports Apple Intelligence; not yet checked on this Mac.
-   - **Open vision-language model with MLX Swift** (for example SmolVLM2 or Qwen2-VL, see [mlx-swift-examples](https://github.com/ml-explore/mlx-swift-examples)): downloaded once or copied from a file, then fully offline; needs an Apple-silicon Mac and enough memory.
-   - **Core ML CLIP-style model** for picture-word matching only (small, fast).
+   - **Open vision-language model with MLX Swift** (for example SmolVLM2 or Qwen2-VL, see [mlx-swift-examples](https://github.com/ml-explore/mlx-swift-examples)): downloaded once or copied from a file, then fully offline. Fits the test Mac (Apple silicon, 32 GB): a 4-bit model of a few GB runs there. **First candidate.**
+   - **Core ML CLIP-style model** such as [MobileCLIP](https://github.com/apple/ml-mobileclip) for picture-word matching only (small, fast). **First candidate for D6.**
+   - **Apple Foundation Models framework:** the on-device model accepts image input in the newest OS generation and needs no server ([WWDC26 session](https://developer-rno.apple.com/videos/play/wwdc2026/241), [overview](https://callstack.com/blog/on-device-ai-after-wwdc-2026-whats-new)). It needs a much newer macOS than the test Mac has (15.8), so it is **not an option today**; revisit after an OS upgrade.
 
 The app must stay usable when no model is installed (then answers are calculated, read from answer pages, or typed once by a grown-up). The earlier cloud solver was removed because it needed an API key and the internet.
 
@@ -443,9 +447,10 @@ _The app finds correct answers by itself, with rules first, then on-device model
 
 **As a** maintainer, **I want** to try the on-device options on the real sample pages, **so that** I choose by measured results, not by guesses.
 
-- [ ] Try: Apple Foundation Models (on-device, image input in the newest macOS), an open vision-language model with MLX Swift (for example SmolVLM2 or Qwen2-VL), Core ML CLIP
+- [ ] Try first, because they run on macOS 15 on the test Mac: an open vision-language model with MLX Swift (for example SmolVLM2 or Qwen2-VL, 4-bit) and a Core ML CLIP model
+- [ ] Apple Foundation Models only if the Mac is upgraded to a newer macOS (it is not available on macOS 15)
 - [ ] Measure on the 9 circles, the 4 tick rows and the 4 lollies
-- [ ] Check macOS version and Mac model needed, speed, memory
+- [ ] Measure speed and memory on the test Mac (M2 Max, 32 GB) and write down the minimum Mac that still works
 - [ ] A model is downloaded once or put in place from a file; after that no network is used
 - [ ] Decision written to docs/OFFLINE_AI.md
 
@@ -767,7 +772,6 @@ _Easy to build without Xcode, safe to publish._
 
 ## Open questions
 
-- Which macOS version and which Mac (Apple silicon, memory) does the family use? It decides which offline AI options in D9 are possible.
 - Do the books come with answer pages (D3)? Which books and subjects should be tested first?
 - Which age range and which language pair first (assumed: English or German workbooks, child aged 6–9)?
 - Mac only, or iPad later? (The SwiftUI code is kept portable.)
