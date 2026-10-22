@@ -1,6 +1,6 @@
 #!/bin/bash
 # Pushes the current branch to GitHub. The pre-push hook (hooks/pre-push) first checks that
-# the commits were made by an Opus model and stops the push if not.
+# an Opus model has reviewed the commits and passed them; otherwise the push is stopped.
 set -euo pipefail
 cd "$(dirname "$0")"
 

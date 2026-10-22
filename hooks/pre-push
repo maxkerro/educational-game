@@ -1,32 +1,56 @@
 #!/bin/bash
-# Pre-push check: every commit that is about to be pushed must be marked as made with a
-# Claude Opus model, i.e. its message has a trailer like
-#     Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-# Commits without it are listed and the push is stopped.
-# Change REQUIRED below to change which model name is accepted.
-REQUIRED='^Co-Authored-By:.*Claude Opus'
+# Pre-push review: the commits that are about to be pushed are sent to an Opus model
+# (through the Claude Code CLI: `claude -p --model opus`). The push goes ahead only if the
+# review answers "VERDICT: PASS". No answer, no `claude` command or "VERDICT: FAIL" stops the push.
+#
+# Settings (environment variables, all optional):
+#   PAGEPALS_REVIEW_CMD   command that reads the commits on stdin and the prompt as last argument
+#                         (default: claude -p --model opus)
+#   PAGEPALS_REVIEW_MAX   how many characters of the commits are sent (default 150000)
 ZERO=0000000000000000000000000000000000000000
+REVIEW_CMD="${PAGEPALS_REVIEW_CMD:-claude -p --model opus}"
+MAX="${PAGEPALS_REVIEW_MAX:-150000}"
 
-bad=0
+commits=""
 while read -r local_ref local_sha remote_ref remote_sha; do
-    [ "$local_sha" = "$ZERO" ] && continue            # deleting a branch: nothing to check
+    [ "$local_sha" = "$ZERO" ] && continue            # deleting a branch: nothing to review
     if [ "$remote_sha" = "$ZERO" ]; then
         range="$local_sha --not --remotes"            # new branch: commits no remote has yet
     else
         range="$remote_sha..$local_sha"
     fi
-    for sha in $(git rev-list $range); do
-        if ! git log -1 --format=%B "$sha" | grep -qiE "$REQUIRED"; then
-            echo "  not made by an Opus model: $(git log -1 --format='%h %s' "$sha")"
-            bad=1
-        fi
-    done
+    commits="$commits $(git rev-list $range | tr '\n' ' ')"
 done
+[ -z "${commits// /}" ] && exit 0                     # nothing new to push
 
-if [ "$bad" -ne 0 ]; then
-    echo
-    echo "Push stopped: the commits above have no 'Co-Authored-By: Claude Opus ...' trailer."
-    echo "Make new commits with an Opus model, or reword these commits, then push again."
+# Show the reviewer the commit messages, the changed files and the changes themselves.
+material="$(git show --stat --patch --format='=== commit %h by %an: %s%n%b' $commits | head -c "$MAX")"
+
+read -r -d '' PROMPT <<'TXT'
+You review git commits that are about to be pushed to a public GitHub repository of a macOS app
+for children's education (Swift, SwiftPM). The commits are on standard input.
+Check for: secrets or credentials; personal data; copyrighted material (pages or scans of
+workbooks, PDFs, book images); large binary files; obvious compile errors or broken scripts;
+changes that do not match their commit message.
+Answer with a short list of findings, then as the LAST line exactly one of:
+VERDICT: PASS
+VERDICT: FAIL
+Use FAIL only for problems that should block the push.
+TXT
+
+echo "Pre-push review by Opus (${REVIEW_CMD}) ..."
+if ! command -v "${REVIEW_CMD%% *}" >/dev/null 2>&1; then
+    echo "Push stopped: '${REVIEW_CMD%% *}' was not found, so the review could not run."
     exit 1
 fi
-exit 0
+
+answer="$(printf '%s' "$material" | $REVIEW_CMD "$PROMPT" 2>&1)"
+echo "$answer"
+echo
+
+verdict="$(printf '%s\n' "$answer" | grep -E '^VERDICT: (PASS|FAIL)' | tail -1)"
+case "$verdict" in
+    "VERDICT: PASS") echo "Review passed. Pushing."; exit 0 ;;
+    "VERDICT: FAIL") echo "Push stopped: the review found problems (see above)."; exit 1 ;;
+    *)               echo "Push stopped: the review gave no VERDICT line."; exit 1 ;;
+esac
