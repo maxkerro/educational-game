@@ -2,7 +2,7 @@ import Foundation
 import PagePalsCore
 
 /// Keeps answer keys on this Mac (UserDefaults), per book file name.
-/// Two kinds are kept apart: "parent" (typed in by a grown-up, always wins) and "ai" (found by the AI).
+/// Only answers typed in by a grown-up are stored; calculated answers (sums) are worked out again on every import.
 enum KeyStore {
     private static func name(_ book: String, _ kind: String) -> String { "pagepals.keys.\(kind).\(book)" }
 

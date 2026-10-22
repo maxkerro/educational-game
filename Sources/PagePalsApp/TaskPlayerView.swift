@@ -15,7 +15,6 @@ struct TaskPlayerView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var key: AnswerKey?
-    @State private var source: KeySource?
     @State private var answers: [String: String] = [:]
     @State private var submitted: Set<String> = []
     @State private var ticks: [String: Bool] = [:]   // tick tasks: row id -> true = "correct" circle
@@ -26,7 +25,6 @@ struct TaskPlayerView: View {
         self.page = page
         self.onSaveKey = onSaveKey
         _key = State(initialValue: task.key)
-        _source = State(initialValue: task.keySource)
     }
 
     private var isNumberTask: Bool { task.kind == .numberInOrder }
@@ -145,20 +143,17 @@ struct TaskPlayerView: View {
                 Spacer()
                 Button("Set answers (grown-up)") { authoring = true; answers = [:]; ticks = [:] }
             } else if isTickTask {
-                Text(source == .ai ? "Tap the right circle in each row. (The answers were found by AI and may be wrong.)"
-                                   : "Tap the right circle in each row.")
+                Text("Tap the right circle in each row.")
                     .foregroundStyle(.secondary)
                 Spacer()
                 Button("Change answers (grown-up)") { authoring = true; answers = [:]; ticks = [:] }
             } else if isNumberTask {
-                Text(source == .ai ? "Type a number into each empty circle. (The answers were found by AI and may be wrong.)"
-                                   : "Type a number into each empty circle.")
+                Text("Type a number into each empty circle.")
                     .foregroundStyle(.secondary)
                 Spacer()
                 Button("Change answers (grown-up)") { authoring = true; answers = [:] }
             } else {
-                Text(source == .ai ? "Write the answer into each grey box. (The answers were found by AI and may be wrong.)"
-                                   : "Write the answer into each grey box. A number or a word is fine.")
+                Text("Write the answer into each grey box. A number or a word is fine.")
                     .foregroundStyle(.secondary)
                 Spacer()
                 Button("Change answers (grown-up)") { authoring = true; answers = [:] }
@@ -187,7 +182,6 @@ struct TaskPlayerView: View {
             }
         }
         key = newKey
-        source = .parent
         onSaveKey(newKey)
         authoring = false
         answers = [:]

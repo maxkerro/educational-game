@@ -75,7 +75,6 @@ public typealias TaskResponse = AnswerKey
 /// Where a task's answer key came from.
 public enum KeySource: String, Codable, Sendable {
     case calculated   // worked out from the page text, e.g. "three + one ="
-    case ai           // found by an AI model looking at the task; may be wrong
     case parent       // typed in by a grown-up
 }
 

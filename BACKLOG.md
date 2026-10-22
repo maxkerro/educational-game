@@ -1,7 +1,7 @@
 # PagePals Backlog
 
 Priority: **P0** must have for MVP, **P1** important, **P2** later. Size: S (<1 day), M (1-3 days), L (3-7 days), XL (>1 week).
-Status legend: `[ ]` todo, `[~]` built, not yet checked on the Mac or only partly done (see the text), `[x]` done and checked.
+Status legend: `[ ]` todo, `[~]` partly done (see the text), `[x]` done and checked on the Mac.
 
 ## Milestones
 
@@ -21,7 +21,7 @@ Status legend: `[ ]` todo, `[~]` built, not yet checked on the Mac or only partl
 - [x] **E0-1 Concept, architecture, research docs** (P0, S) - this repo.
 - [x] **E0-2 Swift package with core model + evaluator + checks** (P0, S) - `PagePalsCore` plus `PagePalsChecks` runner (XCTest is not available without Xcode). *Run `swift run PagePalsChecks` to verify.*
 - [x] **E0-3 macOS SwiftUI app target built with SwiftPM, no Xcode** (P0, S). `PagePalsApp` with a demo fill-in task and `build-app.sh`; built and checks passed on the Mac.
-- [~] **E0-8 Push script and pre-push review** (P1, S). `push.sh` pushes the current branch; `hooks/pre-push` sends the new commits to an Opus model (`claude -p --model opus`) and stops the push unless the answer ends with `VERDICT: PASS`. Hook logic checked with stand-in reviewers; real run stopped by an expired Claude login.
+- [~] **E0-8 Push script and pre-push review** (P1, S). `push.sh` pushes the current branch; `hooks/pre-push` first runs `swift run PagePalsChecks` (stops on failure), then sends the new commits to an Opus model (`claude -p --model opus`) and stops the push unless the answer ends with `VERDICT: PASS`. Hook logic checked with stand-in reviewers; real run stopped by an expired Claude login.
 - [x] **E0-9 rebuild.sh** (P2, S). Quits the running app, builds, starts it.
 - [ ] **E0-4 GitHub Actions CI (macOS runner: `swift build` + `swift run PagePalsChecks`)** (P0, S). AC: green badge on README.
 - [ ] **E0-5 SwiftLint/swift-format config** (P2, S).
@@ -37,7 +37,7 @@ Status legend: `[ ]` todo, `[~]` built, not yet checked on the Mac or only partl
 - [~] **E1-5 Blank / checkbox / bubble detection** (P0, L). Vision rectangle + contour detection for write-in lines, tick circles, numbered bubbles. AC: regions attached to the right task.
 - [~] **E1-6 Task kind classifier (rules)** (P0, M). Maps header + shapes to `TaskKind`; unknown -> `openTask`.
 - [ ] **E1-7 Lesson Pack writer/reader (JSON, versioned)** (P0, S).
-- [~] **E1-8 Optional AI-assisted detection (opt-in)** (P1, L). Answers part done as E9-14; detection of tasks by AI is still open. Vision model proposes tasks + answers from page image; parent sees exactly what will be sent; offline fallback always works. AC: toggle in settings, off by default.
+- [~] **E1-8 Optional AI-assisted detection (opt-in)** (P1, L). The AI answer solver was removed (no API key); AI detection of tasks is still open. Vision model proposes tasks + answers from page image; parent sees exactly what will be sent; offline fallback always works. AC: toggle in settings, off by default.
 - [ ] **E1-9 Answer key extraction from key pages** (P1, M).
 - [ ] **E1-10 Import progress UI + cancel + resume** (P1, M).
 - [ ] **E1-11 Crossword grid detection** (P1, L). Moved to E9-4.
@@ -56,10 +56,10 @@ Requirement from the product owner: tasks in the app must look the same as in th
 - [ ] **E9-8 Word-search player** (P1, L). Swipe to select, found words crossed off, then fill in the sentences next to the original drawings.
 - [ ] **E9-9 Original-picture matching and number-the-pictures players** (P0, M). Use cropped pictures instead of emoji/placeholder art (E3-4, E3-5).
 - [ ] **E9-10 Review editor: adjust picture boxes and assign words** (P0, M). Merge/split boxes, drag corners, pick the word a picture belongs to. Extends E2-3.
-- [~] **E9-12 "Put the number into each circle" task** (P0, M). One page task = one interactive task, not many loose pictures. Done in code: `CircleFinder` (empty circles, prototype found 9/9 on the sample), `TaskBuilder` (header "1. Number." -> task zone, circles -> slots), `TaskPlayerView` (original page with input fields in the circles, green/orange feedback, grown-up enters the answer key once, saved per book on the Mac), checks in `PagePalsChecks`. *Awaiting first run on the Mac.* Still open: guess the key automatically (printed list + pictures), several columns per page, circles with a different radius on the same page.
-- [~] **E9-13 Sums task ("three + one = __")** (P0, M). Done in code: `BlankFinder` (grey answer bars, 8 of 8 on the sample), `NumberWords` (answers are calculated, "4"/"four"/"vier" all count), fill-in player on the original page. *Awaiting first run on the Mac.*
-- [~] **E9-14 Answer keys without grown-ups** (P0, L). Sums are calculated (E9-13). Other tasks: opt-in AI step (`ClaudeAnswerSolver`): the task image with a red letter in every empty field goes to the Anthropic API, the reply (letter -> answer) becomes the key, marked "AI guess"; a grown-up can still correct it. Key in the Keychain, off by default (replaces E1-8 for answers). *Awaiting first run; needs an API key.* Still open: tick tasks, draw-lines tasks, crosswords (solve from the printed word list, E9-5), answer pages of the book (E1-9), a second check pass before an AI key is trusted.
-- [~] **E9-15 "Correct or wrong? Tick." task** (P0, M). Done in code: `TickFinder` (grey tick circles, 8 of 8 on the sample), tick rows (sentence + "correct"/"wrong" circle, columns decided by the printed headers), tappable player on the original page, answers through the AI step (E9-14). *Awaiting first run on the Mac.*
+- [x] **E9-12 "Put the number into each circle" task** (P0, M). One page task = one interactive task, not many loose pictures. Done in code: `CircleFinder` (empty circles, prototype found 9/9 on the sample), `TaskBuilder` (header "1. Number." -> task zone, circles -> slots), `TaskPlayerView` (original page with input fields in the circles, green/orange feedback, grown-up enters the answer key once, saved per book on the Mac), checks in `PagePalsChecks`. Checked on the Mac. Still open: find the key automatically (printed list + pictures), circles of different sizes on one page.
+- [x] **E9-13 Sums task ("three + one = __")** (P0, M). Done in code: `BlankFinder` (grey answer bars, 8 of 8 on the sample), `NumberWords` (answers are calculated, "4"/"four"/"vier" all count), fill-in player on the original page. *Awaiting first run on the Mac.*
+- [~] **E9-14 Answer keys without grown-ups** (P0, L). Sums are calculated from the page text (done, checked). Number circles, answer bars without sums and tick rows cannot be solved automatically yet: the task list marks them "A grown-up must set the answers" and the grown-up types them once (saved on the Mac). The AI-based solver was built and removed again (no API key). Still open without AI: crossword answers from the printed word list (E9-5), answer pages of the book (E1-9), matching pictures to words on device.
+- [x] **E9-15 "Correct or wrong? Tick." task** (P0, M). Done in code: `TickFinder` (grey tick circles, 8 of 8 on the sample), tick rows (sentence + "correct"/"wrong" circle, columns decided by the printed headers), tappable player on the original page, answers through the AI step (E9-14). *Awaiting first run on the Mac.*
 - [ ] **E9-11 Improve detection on difficult pages** (P1, M). Anti-merge for stacked pictures, ignore writing lines, small drawings; measure with golden pages (E7-6).
 
 ## E2 Parent review editor (M1-M2)
@@ -74,9 +74,9 @@ Requirement from the product owner: tasks in the app must look the same as in th
 ## E3 Interactive task players (M1-M2)
 
 - [~] **E3-1 Player shell: page background + overlay + feedback bar** (P0, M).
-- [~] **E3-2 Fill-in player** (P0, M). Tap blank, type or pick tiles; instant check with hint after 2 misses. *(M1 target)*
-- [~] **E3-3 True/False (tick) player** (P0, S).
-- [~] **E3-4 Number-in-order player** (P0, M). Drag numbers onto pictures. First version (type a number into a circle) is E9-12.
+- [x] **E3-2 Fill-in player** (P0, M). Tap blank, type or pick tiles; instant check with hint after 2 misses. *(M1 target)*
+- [x] **E3-3 True/False (tick) player** (P0, S).
+- [x] **E3-4 Number-in-order player** (P0, M). Drag numbers onto pictures. First version (type a number into a circle) is E9-12.
 - [ ] **E3-5 Matching (draw lines) player** (P0, L). Rope drag, snap, wiggle on wrong.
 - [ ] **E3-6 Multiple-choice (read and choose) player** (P1, M). Text read aloud.
 - [ ] **E3-7 Crossword player** (P1, L).

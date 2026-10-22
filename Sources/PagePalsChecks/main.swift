@@ -194,17 +194,6 @@ do {
     check(tasks.first?.items.first?.label == "lollies", "answer bars: word right of the bar is the label")
 }
 
-// AI reply parsing
-do {
-    let items = (1...3).map { TaskItem(id: "s\($0)") }
-    let reply = "Here you go:\n```json\n{\"A\": 5, \"B\": \"4\", \"C\": 6}\n```"
-    let key = try? AnswerParser.parse(reply: reply, kind: .numberInOrder, items: items)
-    check(key?.order == ["s1": 5, "s2": 4, "s3": 6], "AI reply: numbers, with text around the JSON")
-    let words = try? AnswerParser.parse(reply: "{\"A\": \"four\", \"B\": 7, \"C\": \"two\"}", kind: .fillIn, items: items)
-    check(words?.text == ["s1": "four", "s2": "7", "s3": "two"], "AI reply: words and digits for fill-in")
-    check((try? AnswerParser.parse(reply: "{\"A\": 1}", kind: .numberInOrder, items: items)) == nil, "AI reply: missing letter is rejected")
-    check((try? AnswerParser.parse(reply: "I cannot tell.", kind: .numberInOrder, items: items)) == nil, "AI reply: no JSON is rejected")
-}
 
 // Tick task: two columns of grey circles, header words decide which column is "correct"
 do {
@@ -233,9 +222,6 @@ do {
     let other = TaskBuilder.buildTasks(lines: flipped, emptyCircles: [], tickCircles: swapped, idPrefix: "p2")
     check(other.first?.items.first?.region?.x == 0.39, "tick task: header 'correct' over the right column swaps the columns")
 
-    let items = (1...2).map { TaskItem(id: "r\($0)") }
-    let parsed = try? AnswerParser.parse(reply: "{\"A\": true, \"B\": \"wrong\"}", kind: .trueFalse, items: items)
-    check(parsed?.booleans == ["r1": true, "r2": false], "AI reply: true/false and words for tick tasks")
 }
 
 print(failures == 0 ? "\nAll checks passed." : "\n\(failures) check(s) failed.")

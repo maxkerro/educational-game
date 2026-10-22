@@ -1,9 +1,12 @@
 #!/bin/bash
-# Pre-push review: the commits that are about to be pushed are sent to an Opus model
+# Pre-push checks, in this order:
+#   1. `swift run PagePalsChecks` (the project's own checks); if they fail, the push stops here.
+#   2. Review: the commits that are about to be pushed are sent to an Opus model
 # (through the Claude Code CLI: `claude -p --model opus`). The push goes ahead only if the
 # review answers "VERDICT: PASS". No answer, no `claude` command or "VERDICT: FAIL" stops the push.
 #
 # Settings (environment variables, all optional):
+#   PAGEPALS_CHECKS_CMD   command that runs the project checks (default: swift run PagePalsChecks)
 #   PAGEPALS_REVIEW_CMD   command that reads the commits on stdin and the prompt as last argument
 #                         (default: claude -p --model opus)
 #   PAGEPALS_REVIEW_MAX   how many characters of the commits are sent (default 150000)
@@ -23,7 +26,18 @@ while read -r local_ref local_sha remote_ref remote_sha; do
 done
 [ -z "${commits// /}" ] && exit 0                     # nothing new to push
 
-# Show the reviewer the commit messages, the changed files and the changes themselves.
+# Step 1: the project's own checks must pass before anything is sent for review.
+CHECKS_CMD="${PAGEPALS_CHECKS_CMD:-swift run PagePalsChecks}"
+echo "Running checks (${CHECKS_CMD}) ..."
+if ! (cd "$(git rev-parse --show-toplevel)" && $CHECKS_CMD </dev/null); then
+    echo
+    echo "Push stopped: the checks failed. Fix them first; the Opus review was not started."
+    exit 1
+fi
+echo "Checks passed."
+echo
+
+# Step 2: review by Opus. Show the reviewer the commit messages, the changed files and the changes themselves.
 material="$(git show --stat --patch --format='=== commit %h by %an: %s%n%b' $commits | head -c "$MAX")"
 
 read -r -d '' PROMPT <<'TXT'
