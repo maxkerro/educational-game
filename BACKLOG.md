@@ -1,149 +1,777 @@
-# PagePals Backlog
+# PagePals – Product Backlog
 
-Priority: **P0** must have for MVP, **P1** important, **P2** later. Size: S (<1 day), M (1-3 days), L (3-7 days), XL (>1 week).
-Status legend: `[ ]` todo, `[~]` partly done (see the text), `[x]` done and checked on the Mac.
+> **Goal:** open a PDF workbook (English, Math or German) and get an **interactive page for every task**, where the child selects or enters the answer. The app recognises the correct answers **by itself and offline**; a grown-up types an answer only as the last resort.
+
+Updated 22 Oct 2026 · Master copy: `BACKLOG.md` in the repo · Overview of what is built: `README.md`
+
+## Principles
+
+- **Same book, same pictures.** The page in the app looks like the page in the book, with the book's own pictures.
+- **One task, one interactive page.** Never a loose set of pictures.
+- **Answers found automatically.** Rules and calculation first, then on-device models. A grown-up types answers only when nothing else works.
+- **Offline and private.** No internet needed to play or import, no cloud API, no account, no analytics.
+- **Three subjects.** English, Math and German workbooks.
+- **Kind to children.** No dark patterns, gentle feedback.
+- **Easy to build.** Swift Package Manager and Command Line Tools only, no Xcode.
+
+## Status at a glance
+
+Stories: **73** · ✅ done **13** · 🟡 partly **8** · ⬜ to do **52**
+
+| Epic | Stories | ✅ | 🟡 | ⬜ |
+|---|---:|---:|---:|---:|
+| [A · Open a book](#epic-a) | 6 | 1 | 2 | 3 |
+| [B · Recognise the tasks on a page](#epic-b) | 10 | 4 | 2 | 4 |
+| [C · Play: one interactive page per task](#epic-c) | 14 | 3 | 0 | 11 |
+| [D · Answers without a grown-up, offline](#epic-d) | 12 | 2 | 0 | 10 |
+| [E · Subjects: English, Math, German](#epic-e) | 3 | 0 | 1 | 2 |
+| [F · Game layer](#epic-f) | 7 | 0 | 0 | 7 |
+| [G · Parent area and review](#epic-g) | 7 | 1 | 0 | 6 |
+| [H · Quality, privacy and offline](#epic-h) | 7 | 0 | 2 | 5 |
+| [I · Build and delivery](#epic-i) | 7 | 2 | 1 | 4 |
+
+**Legend:** ✅ done and checked on the Mac · 🟡 partly done (see the ticked and open criteria) · ⬜ to do. Priority **P0** must have, **P1** important, **P2** later. Size **S** < 1 day, **M** 1–3 days, **L** 3–7 days, **XL** > 1 week. Criteria with `[x]` are met.
 
 ## Milestones
 
-| Milestone | Goal | Epics |
-|---|---|---|
-| **M0 Foundations** | Repo, CI, Xcode app shell, core model | E0 |
-| **M1 Walking skeleton** | One real book page -> one working interactive task, end to end | E1, E2 (partial), E3 (fill-in only) |
-| **M2 MVP** | All catalogue task types play correctly from an imported book, with parent review | E1-E4 |
-| **M3 Game layer** | World map, Pal, stars, streaks | E5 |
-| **M4 Parent features** | Progress, time limits, answer keys | E6 |
-| **M5 Polish and release** | Accessibility, sound/voice, notarised build | E7, E8 |
+| | Milestone | What the user can do | Stories |
+|---|---|---|---|
+| 🟡 **M1** | Play a real page | A real book page becomes playable pages (numbers, sums, ticks); the grown-up types answers where needed. | A1, B1, B3, B4, B5, C1, C2, C3, D1, D11, G1, H3, I1, I2, I3 |
+| 🟡 **M2** | Answers without a grown-up, offline | Sums, answer pages, crosswords and word searches are solved by rules; pictures are matched to words by an on-device model. | D2, D3, D4, D5, D6, D7, D9, D10, H1 |
+| 🟡 **M3** | All task types | Matching lines, multiple choice, circling, ordering, crossword, word search and open tasks have a page. | A3, A4, A5, B2, B6, B7, B8, B9, B10, C4, C5, C6, C7, C8, C9, C10 |
+| 🟡 **M4** | Three subjects | Open an English, a Math or a German PDF workbook and get an interactive page for each task, with answers recognised. | A6, D8, E1, E2, E3 |
+| ⬜ **M5** | Game and parent area | Pal, stars, world map; progress, time limits, profiles, review editor. | A2, C11, C12, D12, F1, F2, F3, F4, F5, F6, G2, G3, G4, G5, G6 |
+| ⬜ **M6** | Release | Accessibility, localisation, signed and notarised app. | C13, C14, F7, G7, H2, H4, H5, H6, H7, I4, I5, I6, I7 |
 
----
+## Personas
 
-## E0 Foundations (M0)
+- **Child** (6–9 years): wants to play and answer on a page that looks like the book.
+- **Parent / grown-up**: loads the books, wants to type as little as possible, stays in control.
+- **Maintainer**: builds and releases the app.
 
-- [x] **E0-1 Concept, architecture, research docs** (P0, S) - this repo.
-- [x] **E0-2 Swift package with core model + evaluator + checks** (P0, S) - `PagePalsCore` plus `PagePalsChecks` runner (XCTest is not available without Xcode). *Run `swift run PagePalsChecks` to verify.*
-- [x] **E0-3 macOS SwiftUI app target built with SwiftPM, no Xcode** (P0, S). `PagePalsApp` with a demo fill-in task and `build-app.sh`; built and checks passed on the Mac.
-- [~] **E0-8 Push script and pre-push review** (P1, S). `push.sh` pushes the current branch; `hooks/pre-push` first runs `swift run PagePalsChecks` (stops on failure), then sends the new commits to an Opus model (`claude -p --model opus`) and stops the push unless the answer ends with `VERDICT: PASS`. Hook logic checked with stand-in reviewers; real run stopped by an expired Claude login.
-- [x] **E0-9 rebuild.sh** (P2, S). Quits the running app, builds, starts it.
-- [ ] **E0-4 GitHub Actions CI (macOS runner: `swift build` + `swift run PagePalsChecks`)** (P0, S). AC: green badge on README.
-- [ ] **E0-5 SwiftLint/swift-format config** (P2, S).
-- [x] **E0-7 Browser prototype of the child experience** (P1, M) - `prototype/index.html`: write, tick and match tasks, hints, stars, growing Pal. Used to validate the feel before building the SwiftUI player.
-- [ ] **E0-6 Synthetic sample pages for tests** (P0, M). AC: 5+ generated pages covering each task type, no copyrighted content.
+## Offline AI options
 
-## E1 Import pipeline (M1-M2)
+Order of methods, from simple to heavy; each step works without the internet:
 
-- [~] **E1-1 PDF picker + page rendering at 200 dpi** (P0, M). Done: Open PDF button, page view, previous/next (`PagePalsImport/PDFBook`, Import tab). *Awaiting first run.* Still open: drag-and-drop, thumbnails of all pages.
-- [~] **E1-2 Spread splitting** (P1, M). Partly: a spread is read as a left and a right page when building tasks (`TaskBuilder.zones`), but the image is not split and page numbers are not read. Detect gutter in two-page scans and split into logical pages. AC: sample book spreads become single pages with correct page numbers.
-- [~] **E1-3 OCR with Vision (en/de/ru)** (P0, M). Done: `PageOCR` returns lines with normalised boxes and confidence, drawn over the page in the Import tab (en-US, de-DE). *Awaiting first run.* Still open: ru-RU, store results per page, language setting.
-- [~] **E1-4 Task header detection** (P0, M). Done: "<number>. <instruction>" headers, long ones, stray icon in front; checked on two real spreads (4 tasks found each). Still open: golden test for the 80% criterion. Numbered headers + instruction keywords ("Write", "Tick", "Draw lines", "Number", "Crossword", "Read and ..."). AC: >=80% of headers found on the sample book (measured by golden test).
-- [~] **E1-5 Blank / checkbox / bubble detection** (P0, L). Vision rectangle + contour detection for write-in lines, tick circles, numbered bubbles. AC: regions attached to the right task.
-- [~] **E1-6 Task kind classifier (rules)** (P0, M). Maps header + shapes to `TaskKind`; unknown -> `openTask`.
-- [ ] **E1-7 Lesson Pack writer/reader (JSON, versioned)** (P0, S).
-- [~] **E1-8 Optional AI-assisted detection (opt-in)** (P1, L). The AI answer solver was removed (no API key); AI detection of tasks is still open. Vision model proposes tasks + answers from page image; parent sees exactly what will be sent; offline fallback always works. AC: toggle in settings, off by default.
-- [ ] **E1-9 Answer key extraction from key pages** (P1, M).
-- [ ] **E1-10 Import progress UI + cancel + resume** (P1, M).
-- [ ] **E1-11 Crossword grid detection** (P1, L). Moved to E9-4.
+1. **Rules and calculation:** sums, number words, answer pages, crossword fitting, word-search scanning (D1–D5).
+2. **Classic on-device ML:** Apple Vision (text, shapes), Natural Language (word similarity, en/de), an image-text model in Core ML such as [MobileCLIP](https://github.com/apple/ml-mobileclip) to match pictures to words (D6).
+3. **Optional local language / vision model** for reading, grammar and counting (D7, D8). Candidates, to be measured in spike D9:
+   - **Apple Foundation Models framework:** the on-device model accepts image input in the newest OS generation, runs on the Mac without a server ([WWDC26 session](https://developer-rno.apple.com/videos/play/wwdc2026/241), [overview](https://callstack.com/blog/on-device-ai-after-wwdc-2026-whats-new)). Needs the newest macOS and a Mac that supports Apple Intelligence; not yet checked on this Mac.
+   - **Open vision-language model with MLX Swift** (for example SmolVLM2 or Qwen2-VL, see [mlx-swift-examples](https://github.com/ml-explore/mlx-swift-examples)): downloaded once or copied from a file, then fully offline; needs an Apple-silicon Mac and enough memory.
+   - **Core ML CLIP-style model** for picture-word matching only (small, fast).
 
-## E9 Picture fidelity and puzzle tasks (M2)
+The app must stay usable when no model is installed (then answers are calculated, read from answer pages, or typed once by a grown-up). The earlier cloud solver was removed because it needed an API key and the internet.
 
-Requirement from the product owner: tasks in the app must look the same as in the book, and every word must show the **same picture** as in the PDF.
+## Epic A · Open a book
+<a id="epic-a"></a>
 
-- [~] **E9-1 Picture detection and cut-out** (P0, L). Prototype validated in Python on the sample (`tools/picture-prototype`): crossword page found all 10 fruit pictures plus the basket; word-search page found hands, ears, eyes, lips, legs, feet. Swift port in `PictureFinder`, Import tab shows blue boxes and cropped thumbnails. *Awaiting first run on the Mac.* Known gaps: stacked pictures can merge, grey writing lines can stick to a picture, tiny drawings can be missed.
-- [ ] **E9-2 Save picture crops as lesson-pack assets** (P0, S). PNG per picture with a margin, referenced by `TaskItem.imageFile`.
-- [ ] **E9-3 Picture-to-word association** (P0, L). Crossword: picture next to the first cell of a word. Fill-in sentences: picture right of the blank. Matching: picture next to its line start. Word lists: order and proximity. Always editable in the review editor.
-- [ ] **E9-4 Crossword grid detection** (P0, L). Find cells (curved photo, perspective), group into across/down runs, number them. Replaces E1-11.
-- [ ] **E9-5 Crossword solver** (P1, M). Fit the printed word list into the runs by length and crossing letters to get the answer key without an answer page.
-- [ ] **E9-6 Crossword player with picture clues** (P0, L). Rebuilt grid, original pictures as clues, keyboard input, per-letter feedback.
-- [ ] **E9-7 Word-search detection** (P1, L). Letter grid cells (Vision reads single letters unreliably, so per-cell recognition), word list, sentence blanks with their pictures.
-- [ ] **E9-8 Word-search player** (P1, L). Swipe to select, found words crossed off, then fill in the sentences next to the original drawings.
-- [ ] **E9-9 Original-picture matching and number-the-pictures players** (P0, M). Use cropped pictures instead of emoji/placeholder art (E3-4, E3-5).
-- [ ] **E9-10 Review editor: adjust picture boxes and assign words** (P0, M). Merge/split boxes, drag corners, pick the word a picture belongs to. Extends E2-3.
-- [x] **E9-12 "Put the number into each circle" task** (P0, M). One page task = one interactive task, not many loose pictures. Done in code: `CircleFinder` (empty circles, prototype found 9/9 on the sample), `TaskBuilder` (header "1. Number." -> task zone, circles -> slots), `TaskPlayerView` (original page with input fields in the circles, green/orange feedback, grown-up enters the answer key once, saved per book on the Mac), checks in `PagePalsChecks`. Checked on the Mac. Still open: find the key automatically (printed list + pictures), circles of different sizes on one page.
-- [x] **E9-13 Sums task ("three + one = __")** (P0, M). Done in code: `BlankFinder` (grey answer bars, 8 of 8 on the sample), `NumberWords` (answers are calculated, "4"/"four"/"vier" all count), fill-in player on the original page. *Awaiting first run on the Mac.*
-- [~] **E9-14 Answer keys without grown-ups** (P0, L). Sums are calculated from the page text (done, checked). Number circles, answer bars without sums and tick rows cannot be solved automatically yet: the task list marks them "A grown-up must set the answers" and the grown-up types them once (saved on the Mac). The AI-based solver was built and removed again (no API key). Still open without AI: crossword answers from the printed word list (E9-5), answer pages of the book (E1-9), matching pictures to words on device.
-- [x] **E9-15 "Correct or wrong? Tick." task** (P0, M). Done in code: `TickFinder` (grey tick circles, 8 of 8 on the sample), tick rows (sentence + "correct"/"wrong" circle, columns decided by the printed headers), tappable player on the original page, answers through the AI step (E9-14). *Awaiting first run on the Mac.*
-- [ ] **E9-11 Improve detection on difficult pages** (P1, M). Anti-merge for stacked pictures, ignore writing lines, small drawings; measure with golden pages (E7-6).
+_A grown-up opens a PDF workbook and the app keeps it._
 
-## E2 Parent review editor (M1-M2)
+### A1 · Open a PDF workbook ✅
 
-- [x] **E2-1 Page view with detected regions overlay** (P0, M). Import tab: text, pictures, circles, answer bars; checked on the Mac.
-- [ ] **E2-2 Edit task: kind, prompt, expected answers** (P0, M).
-- [ ] **E2-3 Draw/move/resize regions** (P0, M).
-- [ ] **E2-4 Confidence indicator + "needs review" queue** (P1, S).
-- [ ] **E2-5 Mark task as skip / as "parent-checked"** (P1, S).
-- [ ] **E2-6 Undo/redo** (P2, M).
+**As a** parent, **I want** to open a PDF workbook on my Mac, **so that** its pages are shown in the app.
 
-## E3 Interactive task players (M1-M2)
+- [x] Open PDF… picker, pages drawn at 200 dpi, Previous / Next
+- [x] Works with scanned books (photos of pages)
 
-- [~] **E3-1 Player shell: page background + overlay + feedback bar** (P0, M).
-- [x] **E3-2 Fill-in player** (P0, M). Tap blank, type or pick tiles; instant check with hint after 2 misses. *(M1 target)*
-- [x] **E3-3 True/False (tick) player** (P0, S).
-- [x] **E3-4 Number-in-order player** (P0, M). Drag numbers onto pictures. First version (type a number into a circle) is E9-12.
-- [ ] **E3-5 Matching (draw lines) player** (P0, L). Rope drag, snap, wiggle on wrong.
-- [ ] **E3-6 Multiple-choice (read and choose) player** (P1, M). Text read aloud.
-- [ ] **E3-7 Crossword player** (P1, L).
-- [ ] **E3-8 Open-task player (parent confirms)** (P0, M). Fallback for anything undetected.
-- [ ] **E3-9 Hint system** (P1, M). Progressive: highlight area -> first letter -> reveal.
-- [ ] **E3-10 Handwriting input (trackpad / Apple Pencil via Sidecar)** (P2, XL).
-- [ ] **E3-11 Reduced-motion and large-target modes** (P1, S).
+`Done` · `P0` · `M` · `M1` · Checked on a 29-page two-page-spread scan.
 
-## E4 Evaluation and adaptive difficulty (M2)
+### A2 · Open books by drag and drop and from a recent list ⬜
 
-- [x] **E4-1 Evaluator for all kinds** (P0, M) - in `PagePalsCore` (text, boolean, order, pair).
-- [ ] **E4-2 Per-item attempt tracking** (P0, S).
-- [ ] **E4-3 Spaced repetition: re-offer missed items later as mini-review** (P1, L).
-- [ ] **E4-4 Adaptive hints/difficulty from error history** (P2, L).
+**As a** parent, **I want** to drop a PDF on the window or pick it from a recent list, **so that** starting a lesson takes one step.
 
-## E5 Game layer (M3)
+- [ ] Drop a PDF on the window opens it
+- [ ] Last 5 books are listed on the start screen
 
-- [ ] **E5-1 Pal selection and 3 growth stages (original art)** (P0, L).
-- [ ] **E5-2 Stars and food rewards per task** (P0, M).
-- [ ] **E5-3 World map: chapters = islands, pages = stops, locks** (P0, L).
-- [ ] **E5-4 Pal reactions (cheer, comfort, nap)** (P1, M).
-- [ ] **E5-5 Room/wardrobe with collectibles** (P1, L).
-- [ ] **E5-6 Gentle daily streak (no loss framing)** (P1, S).
-- [ ] **E5-7 Sound effects and music with mute** (P1, M).
-- [ ] **E5-8 Text-to-speech for target-language phrases** (P1, M).
-- [ ] **E5-9 Mini bonus games from mastered vocabulary** (P2, XL).
+`To do` · `P2` · `S` · `M5`
 
-## E6 Parent area (M4)
+### A3 · Split two-page spreads into book pages 🟡
 
-- [ ] **E6-1 Parent gate (simple adult challenge)** (P0, S).
-- [ ] **E6-2 Progress dashboard: pages done, accuracy, hard items** (P1, M).
-- [ ] **E6-3 Daily time limit and calm end-of-session** (P1, M).
-- [ ] **E6-4 Multiple children profiles (local)** (P1, M).
-- [ ] **E6-5 Export progress (PDF/CSV)** (P2, S).
-- [ ] **E6-6 Library management: import, rename, delete books** (P0, S).
+**As a** parent, **I want** each book page to be its own page with its printed page number, **so that** I can say 'page 10' and find it.
 
-## E7 Quality, accessibility, ethics (M5)
+- [x] Tasks on the left and the right page are found separately
+- [ ] The image is split at the gutter
+- [ ] The printed page number is read and shown
 
-- [ ] **E7-1 VoiceOver labels and keyboard navigation** (P1, M).
-- [ ] **E7-2 Localisation: UI in en/de/ru** (P1, M).
-- [ ] **E7-3 Privacy review: no analytics, no accounts, data stays local** (P0, S).
-- [ ] **E7-4 Ethical-design checklist (no dark patterns) and read the gamification papers in RESEARCH.md** (P1, S).
-- [ ] **E7-5 Usability tests with 3-5 children and parents** (P1, L).
-- [ ] **E7-6 Import golden tests on synthetic pages** (P0, M).
+`Partly done` · `P1` · `M` · `M3` · Old E1-2.
 
-## E8 Distribution (M5)
+### A4 · Keep imported books in a library ⬜
 
-- [ ] **E8-1 App icon, name check, trademark check for "PagePals"** (P1, S).
-- [ ] **E8-2 Code signing, notarisation, DMG** (P1, M).
-- [ ] **E8-3 Decide on Mac App Store (Kids category rules, privacy labels)** (P2, M).
-- [ ] **E8-4 Landing page** (P2, M).
+**As a** parent, **I want** a book to be recognised once and then stay in my library, **so that** it opens fast the next time and my answers are not lost.
 
----
+- [ ] Lesson Pack (JSON + picture files) is written after import and read on start
+- [ ] Cut-out pictures are saved as files, not recomputed
+- [ ] Rename and delete a book
+- [ ] Pack has a version number and loads older versions
 
-## First sprint proposal (reach M1)
+`To do` · `P0` · `L` · `M3` · Replaces E1-7, E9-2, E6-6.
 
-1. E0-3 app target, E0-4 CI
-2. E1-1 render pages, E1-3 OCR
-3. E3-1 player shell + E3-2 fill-in player
-4. E1-7 pack JSON, hand-authored pack for one page of the sample book as the first end-to-end demo
-5. E2-1 region overlay (read-only), to see what OCR found
+### A5 · See import progress, cancel and resume ⬜
 
-Definition of done: a child can open one page of the sample book and fill in "three + one = ..." as an interactive task with instant feedback.
+**As a** parent, **I want** to see how far the import is and to stop it, **so that** a long book does not block me.
+
+- [ ] Progress per page, Cancel button
+- [ ] Resumes after quit without redoing finished pages
+
+`To do` · `P1` · `M` · `M3` · Old E1-10.
+
+### A6 · Read English, German and Russian text 🟡
+
+**As a** parent, **I want** the text of my books to be read correctly, **so that** tasks and answers are found.
+
+- [x] English and German text recognised (Apple Vision, on device)
+- [ ] Russian recognised
+- [ ] Language per book, mixed-language pages work
+
+`Partly done` · `P0` · `M` · `M4` · Old E1-3.
+
+## Epic B · Recognise the tasks on a page
+<a id="epic-b"></a>
+
+_The app finds each task, its answer fields and its pictures by itself._
+
+### B1 · Find every task on a page ✅
+
+**As a** parent, **I want** each numbered task to be found with its instruction, **so that** each task becomes its own page.
+
+- [x] Headers like '1. Number.' and '4. How many lollies? Trace the lines and write.' found, also with a pencil icon in front
+- [x] Spreads give tasks for both pages
+- [ ] Test pages measure ≥ 90% of headers found (see B10)
+
+`Done` · `P0` · `M` · `M1` · Old E1-4.
+
+### B2 · Cut out the pictures exactly as in the book 🟡
+
+**As a** child, **I want** to see the same pictures as in my book, **so that** I recognise them and the page feels familiar.
+
+- [x] Pictures are found and shown as boxes and thumbnails
+- [ ] Page shadows, grey arrow shapes and the gutter are not reported as pictures
+- [ ] Stacked pictures are not merged
+- [ ] Small drawings are not missed
+
+`Partly done` · `P0` · `L` · `M3` · Old E9-1, E9-11.
+
+### B3 · Find empty circles to fill ✅
+
+**As a** parent, **I want** empty answer circles to be found, **so that** a task can ask the child for a number there.
+
+- [x] 9 of 9 answer circles found on the sample page, printed circles and loops in scribbles ignored
+
+`Done` · `P0` · `M` · `M1` · Old E9-12.
+
+### B4 · Find grey answer bars ✅
+
+**As a** parent, **I want** grey answer bars to be found, **so that** a task can ask the child to write there.
+
+- [x] 8 of 8 bars found on the sample page
+
+`Done` · `P0` · `S` · `M1` · Old E9-13.
+
+### B5 · Find tick circles ✅
+
+**As a** parent, **I want** the correct / wrong circles to be found in columns and rows, **so that** a task can ask the child to tick.
+
+- [x] 8 of 8 grey circles found; the column headed 'correct' is detected
+
+`Done` · `P0` · `S` · `M1` · Old E9-15.
+
+### B6 · Find writing lines, boxes, check boxes and bubbles ⬜
+
+**As a** parent, **I want** all other answer places to be found, **so that** more task types work.
+
+- [ ] Writing lines and boxes
+- [ ] Square check boxes and round bubbles with a letter or number
+- [ ] Each field is attached to the right task
+
+`To do` · `P0` · `L` · `M3` · Old E1-5.
+
+### B7 · Recognise the task type 🟡
+
+**As a** parent, **I want** the app to decide how a task is played, **so that** I do not choose types by hand.
+
+- [x] Numbers, fill-in and tick are chosen from the shapes found
+- [ ] Words in the header ('Draw lines', 'Circle', 'Match', 'Colour', 'Crossword', 'Read and choose') choose the type
+- [ ] Unknown tasks become open tasks
+
+`Partly done` · `P0` · `M` · `M3` · Old E1-6.
+
+### B8 · Link each picture to its word or sentence ⬜
+
+**As a** child, **I want** every picture to belong to the right word, **so that** the matching and numbering pages use my book's own pictures.
+
+- [ ] Crossword: picture next to the first cell
+- [ ] Fill-in: picture right of the blank
+- [ ] Word list: by order and closeness
+- [ ] Wrong links can be fixed in the review editor (G2)
+
+`To do` · `P0` · `L` · `M3` · Old E9-3.
+
+### B9 · Recognise crosswords and word searches ⬜
+
+**As a** parent, **I want** crossword grids and letter grids to be found, **so that** those tasks can be played.
+
+- [ ] Crossword cells found on a curved or tilted photo, numbered across / down
+- [ ] Letter grid read cell by cell (single letters are not reliable in plain OCR)
+- [ ] Printed word list read
+
+`To do` · `P1` · `L` · `M3` · Old E9-4, E9-7.
+
+### B10 · Test pages for recognition ⬜
+
+**As a** maintainer, **I want** synthetic test pages with known answers, **so that** I can measure recognition and catch regressions.
+
+- [ ] At least 10 generated pages, every task type at least twice, no copyrighted content
+- [ ] A report shows found / missed per page
+- [ ] `swift run PagePalsChecks` runs it
+
+`To do` · `P0` · `M` · `M3` · Old E0-6, E7-6.
+
+## Epic C · Play: one interactive page per task
+<a id="epic-c"></a>
+
+_The child sees the book page and answers on it._
+
+### C1 · Put numbers into circles ✅
+
+**As a** child, **I want** to type a number into each empty circle on my page, **so that** I can number the pictures.
+
+- [x] Original page with white input circles, big dark digits
+- [x] Right = green, wrong = orange, all right = 'All correct'
+- [x] Grown-up can set the answers once
+
+`Done` · `P0` · `M` · `M1` · Old E3-4.
+
+### C2 · Write answers into boxes ✅
+
+**As a** child, **I want** to write a number or a word into each grey box, **so that** I can solve sums and fill in gaps.
+
+- [x] '4', 'four' and 'vier' all count
+- [x] Judged when typed fully or with Return
+
+`Done` · `P0` · `M` · `M1` · Old E3-2.
+
+### C3 · Tick correct or wrong ✅
+
+**As a** child, **I want** to tap 'correct' or 'wrong' in each row, **so that** I can say if a sentence fits the picture.
+
+- [x] Tappable circles with a check mark, per-row feedback
+
+`Done` · `P0` · `S` · `M1` · Old E3-3.
+
+### C4 · Draw lines to match ⬜
+
+**As a** child, **I want** to draw a line from a picture to its word, **so that** I can match like in my book.
+
+- [ ] Drag from a start point to an end point, line snaps
+- [ ] Wrong line wiggles back gently
+- [ ] Works picture-word and picture-picture
+
+`To do` · `P0` · `L` · `M3` · Old E3-5.
+
+### C5 · Choose one answer ⬜
+
+**As a** child, **I want** to tap the right answer among several, **so that** I can do 'read and choose' tasks.
+
+- [ ] Options as buttons with the book's text or pictures
+- [ ] Text can be read aloud (C12)
+
+`To do` · `P0` · `M` · `M3` · Old E3-6.
+
+### C6 · Circle or underline ⬜
+
+**As a** child, **I want** to circle or underline the right words or pictures, **so that** I can do 'find and circle' tasks.
+
+- [ ] Tap to circle, tap again to remove
+- [ ] Feedback per item
+
+`To do` · `P1` · `M` · `M3`
+
+### C7 · Solve a crossword with picture clues ⬜
+
+**As a** child, **I want** to fill a crossword whose clues are my book's pictures, **so that** it looks like my book.
+
+- [ ] Rebuilt grid, original pictures as clues
+- [ ] Keyboard input, per-letter feedback
+
+`To do` · `P1` · `L` · `M3` · Old E3-7, E9-6.
+
+### C8 · Find words in a letter grid ⬜
+
+**As a** child, **I want** to swipe over words in the grid and cross them off the list, **so that** I can do word searches.
+
+- [ ] Swipe selection, found words crossed off
+- [ ] Then the sentences next to the drawings can be filled in
+
+`To do` · `P1` · `L` · `M3` · Old E9-8.
+
+### C9 · Put things in order ⬜
+
+**As a** child, **I want** to drag words, sentences or pictures into order, **so that** I can do ordering tasks.
+
+- [ ] Drag and drop with snap
+- [ ] Feedback per position
+
+`To do` · `P1` · `M` · `M3`
+
+### C10 · Do open tasks on paper and confirm ⬜
+
+**As a** child, **I want** a page even for drawing, colouring or speaking tasks, **so that** no task is skipped.
+
+- [ ] Shows the task page and a 'Done' button
+- [ ] A grown-up confirms, the star is given
+
+`To do` · `P0` · `M` · `M3` · Old E3-8.
+
+### C11 · Get hints that do not give the answer away ⬜
+
+**As a** child, **I want** a small hint when I am stuck, **so that** I learn instead of guessing.
+
+- [ ] After two wrong tries the field is highlighted
+- [ ] Then the first letter or the matching word is shown
+
+`To do` · `P1` · `M` · `M5` · Old E3-9.
+
+### C12 · Hear words read aloud ⬜
+
+**As a** child, **I want** to tap a word or sentence and hear it, **so that** I learn how it sounds, also when I cannot read yet.
+
+- [ ] Works offline with the voices installed on the Mac (English, German)
+- [ ] Speed control
+
+`To do` · `P1` · `M` · `M5` · Old E5-8.
+
+### C13 · Write by hand ⬜
+
+**As a** child, **I want** to write with the trackpad or a pencil, **so that** writing feels natural.
+
+- [ ] Handwriting recognised on device for letters and digits
+
+`To do` · `P2` · `XL` · `M6` · Old E3-10.
+
+### C14 · Use big targets, keyboard and reduced motion ⬜
+
+**As a** child, **I want** big buttons and calm movement, **so that** I can use the app easily.
+
+- [ ] Large-target mode
+- [ ] Reduced-motion setting is respected
+
+`To do` · `P1` · `S` · `M6` · Old E3-11.
+
+## Epic D · Answers without a grown-up, offline
+<a id="epic-d"></a>
+
+_The app finds correct answers by itself, with rules first, then on-device models. No internet, no cloud API._
+
+### D1 · Calculate simple sums ✅
+
+**As a** parent, **I want** answers of 'three + one =' to be calculated, **so that** I do not type them.
+
+- [x] Digits and number words, English and German, + and −
+- [x] Negative results are rejected
+
+`Done` · `P0` · `S` · `M1` · Old E9-13.
+
+### D2 · Calculate every kind of maths task ⬜
+
+**As a** parent, **I want** all arithmetic tasks to be solved by the app, **so that** a Math book needs no typing.
+
+- [ ] + − × ÷ with digits, words and written columns
+- [ ] Missing number (3 + _ = 7), comparing (<, >, =), number sequences, simple equations
+- [ ] Money, time and measures with units
+- [ ] Each solved example from the sample books matches the book's key
+
+`To do` · `P0` · `M` · `M2`
+
+### D3 · Read the answer pages of the book ⬜
+
+**As a** parent, **I want** the app to read the answer key printed at the back of a book, **so that** every task with a key needs no typing.
+
+- [ ] Key pages are found, answers are matched by task number
+- [ ] Used before any other method
+- [ ] Source shown to the grown-up
+
+`To do` · `P1` · `M` · `M2` · Old E1-9.
+
+### D4 · Solve crosswords from the printed word list ⬜
+
+**As a** parent, **I want** crossword answers to be found by fitting the word list, **so that** crosswords need no typing.
+
+- [ ] Words are placed by length and crossing letters
+- [ ] Unique solution found; if not unique, marked for the grown-up
+
+`To do` · `P1` · `M` · `M2` · Old E9-5.
+
+### D5 · Solve word searches ⬜
+
+**As a** parent, **I want** words to be found in the letter grid by search, **so that** word searches need no typing.
+
+- [ ] All 8 directions searched
+- [ ] Found positions become the key
+
+`To do` · `P1` · `M` · `M2`
+
+### D6 · Match pictures to words with an on-device model ⬜
+
+**As a** parent, **I want** the app to know which picture is a 'pencil case' or a 'ruler', **so that** matching and numbering tasks need no typing.
+
+- [ ] An image-text model on the Mac (for example MobileCLIP in Core ML) scores each picture against the words of the task
+- [ ] On the sample school-objects page at least 7 of 9 circles are right (measured, see D9)
+- [ ] Low-confidence matches are marked for the grown-up
+
+`To do` · `P0` · `L` · `M2` · Replaces the removed cloud solver.
+
+### D7 · Count things in a picture ⬜
+
+**As a** parent, **I want** the app to count animals or objects in a picture, **so that** 'There are two ladybirds' can be judged.
+
+- [ ] Counts repeated small objects on the sample page correctly in at least 3 of 4 rows
+- [ ] Uncertain counts are marked for the grown-up
+
+`To do` · `P1` · `L` · `M2`
+
+### D8 · Answer reading and grammar tasks with a local language model ⬜
+
+**As a** parent, **I want** German and English reading and grammar tasks to be answered by an on-device model, **so that** Lückentext, articles, plural and reading questions need little typing.
+
+- [ ] Runs offline, answers with a confidence
+- [ ] Answers agree with the book's key on at least 80% of a sample set
+- [ ] Without the model the app still works (grown-up types)
+
+`To do` · `P1` · `L` · `M4`
+
+### D9 · Choose the offline AI runtime (spike) ⬜
+
+**As a** maintainer, **I want** to try the on-device options on the real sample pages, **so that** I choose by measured results, not by guesses.
+
+- [ ] Try: Apple Foundation Models (on-device, image input in the newest macOS), an open vision-language model with MLX Swift (for example SmolVLM2 or Qwen2-VL), Core ML CLIP
+- [ ] Measure on the 9 circles, the 4 tick rows and the 4 lollies
+- [ ] Check macOS version and Mac model needed, speed, memory
+- [ ] A model is downloaded once or put in place from a file; after that no network is used
+- [ ] Decision written to docs/OFFLINE_AI.md
+
+`To do` · `P0` · `M` · `M2` · See 'Offline AI options' below.
+
+### D10 · Trust an answer only when methods agree ⬜
+
+**As a** parent, **I want** each answer to carry a confidence, **so that** only doubtful answers bother me.
+
+- [ ] Calculation, answer page and model results are compared
+- [ ] Agreement = trusted; disagreement or low score = marked
+
+`To do` · `P1` · `M` · `M2`
+
+### D11 · Type the answers once when nothing else works ✅
+
+**As a** parent, **I want** to type an answer only when the app cannot find it, **so that** no task is stuck.
+
+- [x] Tasks without a found answer show 'A grown-up must set the answers'
+- [x] Typed answers are saved per book on the Mac and always win
+
+`Done` · `P0` · `S` · `M1` · Replaces the removed AI answers (no API key).
+
+### D12 · See where an answer came from ⬜
+
+**As a** parent, **I want** each answer to say 'calculated', 'answer page', 'on-device AI' or 'grown-up', **so that** I can judge how much to trust it.
+
+- [ ] Source label on the task card and in the review editor
+
+`To do` · `P2` · `S` · `M5`
+
+## Epic E · Subjects: English, Math, German
+<a id="epic-e"></a>
+
+_The end goal: open a PDF of any of the three subjects and get a playable page for each task._
+
+### E1 · English workbook 🟡
+
+**As a** child, **I want** my English book's tasks to be playable, **so that** I can learn words and sentences by doing.
+
+- [x] Numbering, fill-in and tick tasks work on a real English book
+- [ ] Matching lines, crosswords, word searches, circling, multiple choice work
+- [ ] At least 80% of the tasks of one real book are playable and at least 70% of them have answers found automatically
+
+`Partly done` · `P0` · `L` · `M4`
+
+### E2 · Math workbook ⬜
+
+**As a** child, **I want** my Math book's tasks to be playable, **so that** I can practise numbers by doing.
+
+- [ ] Arithmetic, number lines, comparing, sequences, counting, simple word problems and shapes
+- [ ] At least 80% playable and at least 90% with answers calculated
+
+`To do` · `P0` · `L` · `M4`
+
+### E3 · German workbook ⬜
+
+**As a** child, **I want** my German book's tasks to be playable, **so that** I can practise reading and writing by doing.
+
+- [ ] Lückentext, der / die / das, plural, spelling, reading questions
+- [ ] At least 80% playable and at least 60% with answers found automatically
+
+`To do` · `P0` · `L` · `M4`
+
+## Epic F · Game layer
+<a id="epic-f"></a>
+
+_Children want to come back by themselves. No dark patterns._
+
+### F1 · Grow a Pal with stars ⬜
+
+**As a** child, **I want** a friend that grows when I finish tasks, **so that** I want to learn more.
+
+- [ ] Three growth stages, original art
+- [ ] Stars per task
+
+`To do` · `P0` · `L` · `M5` · Old E5-1, E5-2.
+
+### F2 · Travel a world map ⬜
+
+**As a** child, **I want** a map where every chapter is an island, **so that** I see how far I am.
+
+- [ ] Chapters = islands, pages = stops, calm unlocking
+
+`To do` · `P0` · `L` · `M5` · Old E5-3.
+
+### F3 · Gentle daily streak ⬜
+
+**As a** child, **I want** to be cheered for coming back, **so that** it feels good, not bad, when I miss a day.
+
+- [ ] No loss framing, no guilt messages
+
+`To do` · `P1` · `S` · `M5` · Old E5-6.
+
+### F4 · Pal reacts ⬜
+
+**As a** child, **I want** my Pal to cheer, comfort or nap, **so that** it feels alive.
+
+- [ ] Cheer on right, comfort on wrong, nap when I stop
+
+`To do` · `P1` · `M` · `M5` · Old E5-4.
+
+### F5 · Sounds and music ⬜
+
+**As a** child, **I want** friendly sounds with a mute button, **so that** it is fun and not loud.
+
+- [ ] Mute and volume, all sounds optional
+
+`To do` · `P1` · `M` · `M5` · Old E5-7.
+
+### F6 · Room with collectibles ⬜
+
+**As a** child, **I want** to decorate a room with things I earned, **so that** I have something of my own.
+
+- [ ] Earned, never bought
+
+`To do` · `P1` · `L` · `M5` · Old E5-5.
+
+### F7 · Mini games from known words ⬜
+
+**As a** child, **I want** short games with words I have learned, **so that** I can repeat without a workbook.
+
+- [ ] Words with right answers become a quick game
+
+`To do` · `P2` · `XL` · `M6` · Old E5-9, E4-3.
+
+## Epic G · Parent area and review
+<a id="epic-g"></a>
+
+_Grown-ups stay in control without doing the work._
+
+### G1 · Review what the app recognised ✅
+
+**As a** parent, **I want** to see tasks, answer fields and pictures drawn on the page, **so that** I can check them quickly.
+
+- [x] Import tab shows text, pictures, circles, bars and tasks per page
+
+`Done` · `P0` · `M` · `M1` · Old E2-1.
+
+### G2 · Correct what the app got wrong ⬜
+
+**As a** parent, **I want** to move or resize boxes, change the task type and fix answers, **so that** a wrong recognition is not the end.
+
+- [ ] Drag and resize fields and pictures
+- [ ] Change task type, prompt and answers
+- [ ] Assign a picture to a word
+- [ ] Undo and redo
+
+`To do` · `P0` · `L` · `M5` · Old E2-2..E2-6, E9-10.
+
+### G3 · Open the grown-up area safely ⬜
+
+**As a** parent, **I want** a simple adult gate, **so that** children cannot change answers or limits.
+
+- [ ] A small adult challenge before the area opens
+
+`To do` · `P0` · `S` · `M5` · Old E6-1.
+
+### G4 · See progress ⬜
+
+**As a** parent, **I want** pages done, accuracy and hard items, **so that** I know where my child needs help.
+
+- [ ] Per child, per book, per task type
+
+`To do` · `P1` · `M` · `M5` · Old E6-2.
+
+### G5 · Set a daily time limit ⬜
+
+**As a** parent, **I want** a calm end of the session, **so that** screen time stays in my hands.
+
+- [ ] The Pal says goodbye, no cut-off in the middle of a task
+
+`To do` · `P1` · `M` · `M5` · Old E6-3.
+
+### G6 · Several children ⬜
+
+**As a** parent, **I want** a profile per child on this Mac, **so that** each child has their own progress.
+
+- [ ] Local profiles, no accounts
+
+`To do` · `P1` · `M` · `M5` · Old E6-4.
+
+### G7 · Export progress ⬜
+
+**As a** parent, **I want** to export progress as PDF or CSV, **so that** I can share it with a teacher.
+
+- [ ] PDF and CSV
+
+`To do` · `P2` · `S` · `M6` · Old E6-5.
+
+## Epic H · Quality, privacy and offline
+<a id="epic-h"></a>
+
+_Safe for children, works without the internet._
+
+### H1 · Work completely offline 🟡
+
+**As a** parent, **I want** the app to need no internet after setup, **so that** it works anywhere and nothing leaves the Mac.
+
+- [x] No cloud API is used (the removed AI answers were the only network feature)
+- [ ] The app has no network access in its sandbox settings
+- [ ] A test with the network switched off passes
+- [ ] Only a one-time model download is allowed, and a model can also be put in place from a file
+
+`Partly done` · `P0` · `S` · `M2`
+
+### H2 · No accounts, no tracking ⬜
+
+**As a** parent, **I want** no accounts and no analytics, **so that** my child's data stays private.
+
+- [ ] Privacy review documented
+- [ ] No third-party SDKs
+
+`To do` · `P0` · `S` · `M6` · Old E7-3.
+
+### H3 · Automatic checks 🟡
+
+**As a** maintainer, **I want** checks to run before every push, **so that** a bad change cannot reach GitHub.
+
+- [x] `swift run PagePalsChecks` has about 45 checks and runs first in the pre-push hook
+- [ ] Recognition quality checks on the test pages (B10)
+- [ ] GitHub Actions runs build and checks
+
+`Partly done` · `P0` · `S` · `M1` · Old E0-4, E7-6.
+
+### H4 · Fair design checklist ⬜
+
+**As a** parent, **I want** the app to follow a checklist against dark patterns, **so that** it helps children and does not trap them.
+
+- [ ] Checklist in docs, reviewed before release
+
+`To do` · `P1` · `S` · `M6` · Old E7-4.
+
+### H5 · Use with VoiceOver and keyboard ⬜
+
+**As a** child, **I want** every control to be reachable and described, **so that** everyone can play.
+
+- [ ] Labels and focus order for all players
+
+`To do` · `P1` · `M` · `M6` · Old E7-1.
+
+### H6 · App text in English, German and Russian ⬜
+
+**As a** parent, **I want** the app's own menus in my language, **so that** I understand it.
+
+- [ ] UI strings in en, de, ru
+
+`To do` · `P1` · `M` · `M6` · Old E7-2.
+
+### H7 · Try it with children ⬜
+
+**As a** maintainer, **I want** 3 to 5 children to try the app, **so that** I learn what works.
+
+- [ ] Notes and changes recorded
+
+`To do` · `P1` · `L` · `M6` · Old E7-5.
+
+## Epic I · Build and delivery
+<a id="epic-i"></a>
+
+_Easy to build without Xcode, safe to publish._
+
+### I1 · Build without Xcode ✅
+
+**As a** maintainer, **I want** to build with Swift Package Manager and Command Line Tools only, **so that** I do not need Xcode.
+
+- [x] `./build-app.sh` makes PagePals.app, ad-hoc signed
+
+`Done` · `P0` · `S` · `M1` · Old E0-3.
+
+### I2 · Rebuild and start in one command ✅
+
+**As a** maintainer, **I want** `./rebuild.sh`, **so that** I try a change in seconds.
+
+- [x] Quits the old app, builds, starts the new one
+
+`Done` · `P2` · `S` · `M1` · Old E0-9.
+
+### I3 · Push safely 🟡
+
+**As a** maintainer, **I want** `./push.sh` to run the checks and an Opus review before the push, **so that** only checked work reaches GitHub.
+
+- [x] push.sh and hooks/pre-push exist; checks run first, then the Opus review
+- [ ] A full run passes once (Claude login must be renewed first)
+
+`Partly done` · `P1` · `S` · `M1` · Old E0-8.
+
+### I4 · App icon and name check ⬜
+
+**As a** parent, **I want** a friendly icon and a free name, **so that** the app is easy to find.
+
+- [ ] Icon, trademark check for 'PagePals'
+
+`To do` · `P1` · `S` · `M6` · Old E8-1.
+
+### I5 · Signed and notarised app ⬜
+
+**As a** parent, **I want** to install the app without warnings, **so that** I trust it.
+
+- [ ] Code signing, notarisation, DMG
+
+`To do` · `P1` · `M` · `M6` · Old E8-2.
+
+### I6 · Decide on the Mac App Store ⬜
+
+**As a** maintainer, **I want** a decision about the store, **so that** I know the rules for kids' apps.
+
+- [ ] Kids category rules and privacy labels reviewed
+
+`To do` · `P2` · `M` · `M6` · Old E8-3.
+
+### I7 · Code style checks ⬜
+
+**As a** maintainer, **I want** a formatter and linter, **so that** the code stays tidy.
+
+- [ ] SwiftLint or swift-format configured
+
+`To do` · `P2` · `S` · `M6` · Old E0-5.
 
 ## Open questions
 
-1. Primary language pair and age range to tune first? (Assumed: English workbook, German-speaking child, ages 6-8.)
-2. Is AI-assisted detection acceptable for the user's privacy stance, or on-device only?
-3. Mac only, or iPad later (the SwiftUI code is designed to port)?
-4. Do the books come with answer keys?
+- Which macOS version and which Mac (Apple silicon, memory) does the family use? It decides which offline AI options in D9 are possible.
+- Do the books come with answer pages (D3)? Which books and subjects should be tested first?
+- Which age range and which language pair first (assumed: English or German workbooks, child aged 6–9)?
+- Mac only, or iPad later? (The SwiftUI code is kept portable.)
+
+## Old numbers
+
+Earlier versions used numbers like E9-12. Each story above lists the old numbers it replaces in its last line (`Old …`).
