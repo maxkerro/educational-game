@@ -19,6 +19,7 @@ final class ImportModel: ObservableObject {
     @Published private(set) var regions: [PageRegion] = []
     @Published private(set) var crops: [PictureCrop] = []
     @Published private(set) var circles: [PageRect] = []
+    @Published private(set) var blanks: [PageRect] = []
     @Published private(set) var tasks: [PlayTask] = []
     @Published private(set) var pageBitmap: CGImage?
     @Published private(set) var status = "Open a PDF workbook to begin."
@@ -46,6 +47,7 @@ final class ImportModel: ObservableObject {
             regions = []
             crops = []
             circles = []
+            blanks = []
             tasks = []
             pageBitmap = nil
             status = "\(url.lastPathComponent): \(opened.pageCount) pages"
@@ -64,7 +66,7 @@ final class ImportModel: ObservableObject {
         status = "Reading page \(index + 1) ..."
 
         Task {
-            let outcome = await Task.detached(priority: .userInitiated) { () -> Result<(CGImage, [RecognizedLine], [PageRegion], [PageRect]), Error> in
+            let outcome = await Task.detached(priority: .userInitiated) { () -> Result<(CGImage, [RecognizedLine], [PageRegion], [PageRect], [PageRect]), Error> in
                 Result {
                     let rendered = try book.renderPage(index)
                     let found = try PageOCR.recognize(rendered)
@@ -72,12 +74,13 @@ final class ImportModel: ObservableObject {
                     let words = found.filter { $0.confidence >= 0.5 }.flatMap { $0.words }
                     let regions = PictureFinder.find(in: rendered, textWords: words)
                     let circles = CircleFinder.findEmpty(in: rendered, textWords: words)
-                    return (rendered, found, regions, circles)
+                    let bars = BlankFinder.find(in: rendered)
+                    return (rendered, found, regions, circles, bars)
                 }
             }.value
 
             switch outcome {
-            case .success(let (rendered, found, foundRegions, foundCircles)):
+            case .success(let (rendered, found, foundRegions, foundCircles, foundBars)):
                 image = NSImage(cgImage: rendered, size: NSSize(width: rendered.width, height: rendered.height))
                 lines = found
                 regions = foundRegions
@@ -85,10 +88,12 @@ final class ImportModel: ObservableObject {
                 pageIndex = index
                 pageBitmap = rendered
                 circles = foundCircles
+                blanks = foundBars
                 tasks = TaskBuilder
                     .buildTasks(
                         lines: found.map { PageText(text: $0.text, box: $0.box) },
                         emptyCircles: foundCircles,
+                        blanks: foundBars,
                         idPrefix: "p\(index + 1)",
                         pageAspect: Double(rendered.width) / Double(rendered.height)
                     )

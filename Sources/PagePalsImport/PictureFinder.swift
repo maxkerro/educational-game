@@ -145,7 +145,7 @@ public enum PictureFinder {
 
 // MARK: - Helpers
 
-private struct IRect: Equatable {
+struct IRect: Equatable {
     var x: Int
     var y: Int
     var w: Int
@@ -166,7 +166,7 @@ private struct IRect: Equatable {
     }
 }
 
-private struct Component {
+struct Component {
     var minX: Int
     var minY: Int
     var maxX: Int
@@ -289,7 +289,7 @@ func boxBlur(_ src: [UInt8], _ w: Int, _ h: Int, radius r: Int) -> [Float] {
 }
 
 /// 8-connected component labelling. Background pixels get label -1.
-private func labelComponents(_ mask: [UInt8], _ w: Int, _ h: Int) -> (labels: [Int32], comps: [Component]) {
+func labelComponents(_ mask: [UInt8], _ w: Int, _ h: Int) -> (labels: [Int32], comps: [Component]) {
     var labels = [Int32](repeating: -1, count: w * h)
     var comps: [Component] = []
     var stack: [Int] = []

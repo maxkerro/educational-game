@@ -62,6 +62,10 @@ struct ImportView: View {
                                 outline(circle, in: geo.size)
                                     .stroke(Color.purple, lineWidth: 2.5)
                             }
+                            ForEach(Array(model.blanks.enumerated()), id: \.offset) { _, bar in
+                                outline(bar, in: geo.size)
+                                    .stroke(Color.teal, lineWidth: 2)
+                            }
                             ForEach(model.regions) { region in
                                 if region.kind == .picture {
                                     outline(region.box, in: geo.size)
@@ -97,7 +101,7 @@ struct ImportView: View {
                             Text(task.prompt).fontWeight(.medium)
                             Text(taskSummary(task)).font(.caption).foregroundStyle(.secondary)
                             Button("Play") { playing = task }
-                                .disabled(task.kind != .numberInOrder)
+                                .disabled(task.kind != .numberInOrder && task.kind != .fillIn)
                         }
                         .padding(8)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -154,6 +158,8 @@ struct ImportView: View {
         switch task.kind {
         case .numberInOrder:
             return "Numbers into \(task.items.count) circles" + (task.key == nil ? " (answers not set)" : "")
+        case .fillIn:
+            return "Fill in \(task.items.count) answers (calculated)"
         default:
             return "Not recognised yet: a grown-up confirms"
         }

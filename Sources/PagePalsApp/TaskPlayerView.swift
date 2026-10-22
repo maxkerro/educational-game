@@ -2,10 +2,12 @@ import SwiftUI
 import AppKit
 import PagePalsCore
 
-/// Plays one "put the right number into each circle" task on the original book page.
-/// The child sees exactly the page from the book; the empty circles become input fields.
-/// Correct numbers turn green, a wrong number is marked gently so the child can try again.
-/// A grown-up types the correct numbers once ("Set answers"); they are remembered on this Mac.
+/// Plays one task on the original book page. The child sees exactly the page from the book;
+/// the empty circles (numbers) or grey answer bars (sums) become input fields.
+///  - `numberInOrder`: "put the right number into each circle". A grown-up types the correct numbers
+///    once ("Set answers"); they are remembered on this Mac.
+///  - `fillIn`: sums such as "three + one =". The answers are calculated, "4" and "four" both count.
+/// Correct answers turn green, a wrong one is marked gently so the child can try again.
 struct TaskPlayerView: View {
     let task: PlayTask
     let page: CGImage
@@ -14,6 +16,7 @@ struct TaskPlayerView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var key: AnswerKey?
     @State private var answers: [String: String] = [:]
+    @State private var submitted: Set<String> = []
     @State private var authoring = false
 
     init(task: PlayTask, page: CGImage, onSaveKey: @escaping (AnswerKey) -> Void) {
@@ -23,12 +26,32 @@ struct TaskPlayerView: View {
         _key = State(initialValue: task.key)
     }
 
+    private var isNumberTask: Bool { task.kind == .numberInOrder }
     private var zone: PageRect { task.region ?? PageRect(x: 0, y: 0, width: 1, height: 1) }
 
+    /// Words are judged when the child has typed as many letters as the answer has, or pressed Return.
+    private func isJudged(_ id: String) -> Bool {
+        if isNumberTask { return true }
+        guard let given = answers[id], !given.isEmpty else { return false }
+        if submitted.contains(id) { return true }
+        guard let expected = key?.text[id] else { return false }
+        // digits are judged as soon as there are as many as the answer needs ("4" for "four")
+        if given.allSatisfy({ $0.isNumber }), let value = NumberWords.value(expected) {
+            return given.count >= String(value).count
+        }
+        return given.count >= expected.count
+    }
+
     private var response: AnswerKey {
-        var order: [String: Int] = [:]
-        for (id, text) in answers { if let n = Int(text) { order[id] = n } }
-        return AnswerKey(order: order)
+        var response = AnswerKey()
+        for (id, text) in answers where isJudged(id) {
+            if isNumberTask {
+                if let n = Int(text) { response.order[id] = n }
+            } else {
+                response.text[id] = text
+            }
+        }
+        return response
     }
 
     private var evaluation: EvaluationResult? {
@@ -73,7 +96,7 @@ struct TaskPlayerView: View {
             footer
         }
         .frame(minWidth: 1000, minHeight: 800)
-        // The book page is light, so the player is always light: dark numbers on white circles.
+        // The book page is light, so the player is always light: dark text on white fields.
         .environment(\.colorScheme, .light)
         .background(Color.white)
     }
@@ -110,10 +133,14 @@ struct TaskPlayerView: View {
                     .foregroundStyle(.secondary)
                 Spacer()
                 Button("Set answers (grown-up)") { authoring = true; answers = [:] }
-            } else {
+            } else if isNumberTask {
                 Text("Type a number into each empty circle.").foregroundStyle(.secondary)
                 Spacer()
                 Button("Change answers (grown-up)") { authoring = true; answers = [:] }
+            } else {
+                Text("Write the answer into each grey box. A number or a word is fine.")
+                    .foregroundStyle(.secondary)
+                Spacer()
             }
         }
         .padding(12)
@@ -135,27 +162,41 @@ struct TaskPlayerView: View {
 
     @ViewBuilder
     private func slot(_ item: TaskItem, rect r: PageRect, in size: CGSize) -> some View {
-        let d = max(r.width / zone.width * size.width * 1.15, 36)
+        let barWidth = r.width / zone.width * size.width
+        let barHeight = r.height / zone.height * size.height
+        // circles: round and a little larger; bars: wider than the printed grey bar, and taller
+        let w = isNumberTask ? max(barWidth * 1.15, 36) : max(barWidth, 90)
+        let h = isNumberTask ? w : max(barHeight * 2.4, 34)
         let cx = (r.x + r.width / 2 - zone.x) / zone.width * size.width
         let cy = (r.y + r.height / 2 - zone.y) / zone.height * size.height
         let state = slotState(item.id)
 
         ZStack {
-            Circle().fill(fill(for: state))
-            Circle().stroke(stroke(for: state), lineWidth: 4)
+            shape(isCircle: isNumberTask).fill(fill(for: state))
+            shape(isCircle: isNumberTask).stroke(stroke(for: state), lineWidth: 3)
             TextField("", text: Binding(
                 get: { answers[item.id] ?? "" },
-                set: { answers[item.id] = String($0.filter { $0.isNumber }.prefix(2)) }
+                set: { newValue in
+                    submitted.remove(item.id)
+                    answers[item.id] = isNumberTask
+                        ? String(newValue.filter { $0.isNumber }.prefix(2))
+                        : String(newValue.filter { $0.isLetter || $0.isNumber }.prefix(14))
+                }
             ))
+            .onSubmit { submitted.insert(item.id) }
             .textFieldStyle(.plain)
             .multilineTextAlignment(.center)
-            .font(.system(size: d * 0.62, weight: .heavy, design: .rounded))
+            .font(.system(size: h * (isNumberTask ? 0.62 : 0.55), weight: .heavy, design: .rounded))
             .foregroundStyle(textColor(for: state))
             .tint(textColor(for: state))
-            .padding(.horizontal, d * 0.05)
+            .padding(.horizontal, h * 0.08)
         }
-        .frame(width: d, height: d)
+        .frame(width: w, height: h)
         .position(x: cx, y: cy)
+    }
+
+    private func shape(isCircle: Bool) -> AnyShape {
+        isCircle ? AnyShape(Circle()) : AnyShape(RoundedRectangle(cornerRadius: 8))
     }
 
     private enum SlotState { case neutral, correct, wrong, authoring }

@@ -36,6 +36,13 @@ public enum TaskEvaluator {
             .joined(separator: " ")
     }
 
+    /// Same text after normalising; numbers match whatever the spelling ("4", "four", "vier").
+    public static func sameText(_ given: String, _ expected: String) -> Bool {
+        if normalize(given) == normalize(expected) { return true }
+        if let a = NumberWords.value(given), let b = NumberWords.value(expected) { return a == b }
+        return false
+    }
+
     public static func evaluate(task: PlayTask, response: TaskResponse) -> EvaluationResult {
         guard let key = task.key else {
             return EvaluationResult(needsParentCheck: true)
@@ -45,7 +52,7 @@ public enum TaskEvaluator {
 
         for (id, expected) in key.text {
             if let given = response.text[id], !normalize(given).isEmpty {
-                if normalize(given) == normalize(expected) { result.correct.insert(id) } else { result.incorrect.insert(id) }
+                if sameText(given, expected) { result.correct.insert(id) } else { result.incorrect.insert(id) }
             } else {
                 result.missing.insert(id)
             }

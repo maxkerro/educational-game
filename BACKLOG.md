@@ -55,6 +55,7 @@ Requirement from the product owner: tasks in the app must look the same as in th
 - [ ] **E9-9 Original-picture matching and number-the-pictures players** (P0, M). Use cropped pictures instead of emoji/placeholder art (E3-4, E3-5).
 - [ ] **E9-10 Review editor: adjust picture boxes and assign words** (P0, M). Merge/split boxes, drag corners, pick the word a picture belongs to. Extends E2-3.
 - [ ] **E9-12 "Put the number into each circle" task** (P0, M). One page task = one interactive task, not many loose pictures. Done in code: `CircleFinder` (empty circles, prototype found 9/9 on the sample), `TaskBuilder` (header "1. Number." -> task zone, circles -> slots), `TaskPlayerView` (original page with input fields in the circles, green/orange feedback, grown-up enters the answer key once, saved per book on the Mac), checks in `PagePalsChecks`. *Awaiting first run on the Mac.* Still open: guess the key automatically (printed list + pictures), several columns per page, circles with a different radius on the same page.
+- [ ] **E9-13 Sums task ("three + one = __")** (P0, M). Done in code: `BlankFinder` (grey answer bars, 8 of 8 on the sample), `NumberWords` (answers are calculated, "4"/"four"/"vier" all count), fill-in player on the original page. *Awaiting first run on the Mac.*
 - [ ] **E9-11 Improve detection on difficult pages** (P1, M). Anti-merge for stacked pictures, ignore writing lines, small drawings; measure with golden pages (E7-6).
 
 ## E2 Parent review editor (M1-M2)

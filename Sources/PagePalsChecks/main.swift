@@ -147,5 +147,36 @@ do {
     check(zones.filter { $0.box.x >= 0.5 }.count == 2, "spread: two tasks on the right page")
 }
 
+// Sums: answers are calculated, "4" and "four" both count
+do {
+    check(NumberWords.answer(forSum: "three + one =") == "four", "sums: words")
+    check(NumberWords.answer(forSum: "ten \u{2013} seven =") == "three", "sums: en dash minus")
+    check(NumberWords.answer(forSum: "10 - 4 =") == "6", "sums: digits")
+    check(NumberWords.answer(forSum: "How much is it? Write.") == nil, "sums: sentence is not a sum")
+    check(NumberWords.answer(forSum: "two - five =") == nil, "sums: negative result is rejected")
+    check(TaskEvaluator.sameText("4", "four"), "text: digit equals word")
+    check(TaskEvaluator.sameText("vier", "four"), "text: German word equals English word")
+    check(!TaskEvaluator.sameText("5", "four"), "text: wrong number differs")
+
+    let lines = [
+        PageText(text: "5. How much is it? Write.", box: PageRect(x: 0.04, y: 0.12, width: 0.25, height: 0.03)),
+        PageText(text: "three + one =", box: PageRect(x: 0.05, y: 0.20, width: 0.08, height: 0.03)),
+        PageText(text: "two + five =", box: PageRect(x: 0.05, y: 0.26, width: 0.08, height: 0.03)),
+        PageText(text: "ten \u{2013} seven =", box: PageRect(x: 0.20, y: 0.20, width: 0.08, height: 0.03))
+    ]
+    let bars = [
+        PageRect(x: 0.15, y: 0.205, width: 0.07, height: 0.012),
+        PageRect(x: 0.15, y: 0.265, width: 0.07, height: 0.012),
+        PageRect(x: 0.30, y: 0.205, width: 0.07, height: 0.012)
+    ]
+    let tasks = TaskBuilder.buildTasks(lines: lines, emptyCircles: [], blanks: bars, idPrefix: "p1", pageAspect: 1.4)
+    check(tasks.first?.kind == .fillIn && tasks.first?.items.count == 3, "sums task: three sums with bars become a fill-in task")
+    if let task = tasks.first {
+        let answers = Dictionary(uniqueKeysWithValues: task.items.map { ($0.id, $0.label ?? "") })
+        let right = AnswerKey(text: answers.mapValues { NumberWords.answer(forSum: $0) ?? "" })
+        check(TaskEvaluator.evaluate(task: task, response: right).isComplete, "sums task: calculated answers complete it")
+    }
+}
+
 print(failures == 0 ? "\nAll checks passed." : "\n\(failures) check(s) failed.")
 exit(failures == 0 ? 0 : 1)

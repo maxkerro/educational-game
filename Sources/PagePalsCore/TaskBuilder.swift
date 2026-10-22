@@ -93,9 +93,10 @@ public enum TaskBuilder {
     /// that a parent confirms, until more task types are recognised.
     /// - Parameters:
     ///   - emptyCircles: boxes of empty circles found on the page
+    ///   - blanks: boxes of grey answer bars; a bar right of a sum like "three + one =" becomes its blank
     ///   - idPrefix: makes task ids unique across pages, e.g. "p3"
     ///   - pageAspect: page width / height; above 1.2 the page is read as a two-page spread
-    public static func buildTasks(lines: [PageText], emptyCircles: [PageRect], idPrefix: String, pageAspect: Double = 0.7) -> [PlayTask] {
+    public static func buildTasks(lines: [PageText], emptyCircles: [PageRect], blanks: [PageRect] = [], idPrefix: String, pageAspect: Double = 0.7) -> [PlayTask] {
         var tasks: [PlayTask] = []
         for (index, zone) in zones(from: lines, pageAspect: pageAspect).enumerated() {
             let inside = emptyCircles
@@ -113,11 +114,41 @@ public enum TaskBuilder {
             if inside.count >= 2 && !isTick {
                 let items = inside.enumerated().map { TaskItem(id: "\(id)-slot\($0.offset + 1)", region: $0.element) }
                 tasks.append(PlayTask(id: id, kind: .numberInOrder, prompt: prompt, region: zone.box, items: items, key: nil, confidence: 0.7))
+            } else if !isTick, let fill = sumsTask(id: id, prompt: prompt, zone: zone, lines: lines, blanks: blanks) {
+                tasks.append(fill)
             } else {
                 tasks.append(PlayTask(id: id, kind: .openTask, prompt: prompt, region: zone.box, items: [], key: nil, confidence: 0.3))
             }
         }
         return tasks
+    }
+
+    /// A zone with sums ("three + one =") that each have an answer bar to their right becomes a
+    /// fill-in task. The answers are calculated, so no answer key is needed.
+    private static func sumsTask(id: String, prompt: String, zone: TaskZone, lines: [PageText], blanks: [PageRect]) -> PlayTask? {
+        var pairs: [(line: PageText, bar: PageRect, answer: String)] = []
+        for line in lines where contains(zone.box, centreOf: line.box) {
+            guard let answer = NumberWords.answer(forSum: line.text) else { continue }
+            let lineCentreY = line.box.y + line.box.height / 2
+            let candidates = blanks.filter { bar in
+                let barCentreY = bar.y + bar.height / 2
+                return abs(barCentreY - lineCentreY) < max(line.box.height, bar.height) * 0.9
+                    && bar.x >= line.box.x + line.box.width - 0.01
+                    && contains(zone.box, centreOf: bar)
+            }
+            if let bar = candidates.min(by: { $0.x < $1.x }) { pairs.append((line, bar, answer)) }
+        }
+        guard pairs.count >= 2 else { return nil }
+        pairs.sort { ($0.bar.y, $0.bar.x) < ($1.bar.y, $1.bar.x) }
+
+        var items: [TaskItem] = []
+        var key = AnswerKey()
+        for (index, pair) in pairs.enumerated() {
+            let itemID = "\(id)-b\(index + 1)"
+            items.append(TaskItem(id: itemID, label: pair.line.text, region: pair.bar))
+            key.text[itemID] = pair.answer
+        }
+        return PlayTask(id: id, kind: .fillIn, prompt: prompt, region: zone.box, items: items, key: key, confidence: 0.8)
     }
 
     private static func contains(_ outer: PageRect, centreOf inner: PageRect) -> Bool {
