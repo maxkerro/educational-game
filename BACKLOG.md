@@ -16,14 +16,14 @@ Updated 22 Oct 2026 · Master copy: `BACKLOG.md` in the repo · Overview of what
 
 ## Status at a glance
 
-Stories: **73** · ✅ done **13** · 🟡 partly **9** · ⬜ to do **51**
+Stories: **73** · ✅ done **13** · 🟡 partly **12** · ⬜ to do **48**
 
 | Epic | Stories | ✅ | 🟡 | ⬜ |
 |---|---:|---:|---:|---:|
 | [A · Open a book](#epic-a) | 6 | 1 | 2 | 3 |
 | [B · Recognise the tasks on a page](#epic-b) | 10 | 4 | 2 | 4 |
 | [C · Play: one interactive page per task](#epic-c) | 14 | 3 | 0 | 11 |
-| [D · Answers without a grown-up, offline](#epic-d) | 12 | 2 | 1 | 9 |
+| [D · Answers without a grown-up, offline](#epic-d) | 12 | 2 | 4 | 6 |
 | [E · Subjects: English, Math, German](#epic-e) | 3 | 0 | 1 | 2 |
 | [F · Game layer](#epic-f) | 7 | 0 | 0 | 7 |
 | [G · Parent area and review](#epic-g) | 7 | 1 | 0 | 6 |
@@ -386,33 +386,35 @@ _The app finds correct answers by itself, with rules first, then on-device model
 
 `Partly done` · `P0` · `M` · `M2`
 
-### D3 · Read the answer pages of the book ⬜
+### D3 · Read the answer pages of the book 🟡
 
 **As a** parent, **I want** the app to read the answer key printed at the back of a book, **so that** every task with a key needs no typing.
 
-- [ ] Key pages are found, answers are matched by task number
-- [ ] Used before any other method
-- [ ] Source shown to the grown-up
+- [x] Key pages are found (heading + 'n. answers' lines) and answers are matched by task number to number and fill-in tasks
+- [ ] The importer reads all pages of a book first and applies the key before any other method
+- [ ] Source 'answer page' shown to the grown-up (D12)
 
-`To do` · `P1` · `M` · `M2` · Old E1-9.
+`Partly done` · `P1` · `M` · `M2` · Old E1-9.
 
-### D4 · Solve crosswords from the printed word list ⬜
+### D4 · Solve crosswords from the printed word list 🟡
 
 **As a** parent, **I want** crossword answers to be found by fitting the word list, **so that** crosswords need no typing.
 
-- [ ] Words are placed by length and crossing letters
-- [ ] Unique solution found; if not unique, marked for the grown-up
+- [x] Words are placed by length and crossing letters
+- [x] Unique solution found; if not unique, marked for the grown-up
+- [ ] Fed by the recognised crossword grid (B9)
 
-`To do` · `P1` · `M` · `M2` · Old E9-5.
+`Partly done` · `P1` · `M` · `M2` · Old E9-5.
 
-### D5 · Solve word searches ⬜
+### D5 · Solve word searches 🟡
 
 **As a** parent, **I want** words to be found in the letter grid by search, **so that** word searches need no typing.
 
-- [ ] All 8 directions searched
-- [ ] Found positions become the key
+- [x] All 8 directions searched
+- [x] Words found once give their position; others are marked for the grown-up
+- [ ] Fed by the recognised letter grid (B9)
 
-`To do` · `P1` · `M` · `M2`
+`Partly done` · `P1` · `M` · `M2`
 
 ### D6 · Match pictures to words with an on-device model ⬜
 

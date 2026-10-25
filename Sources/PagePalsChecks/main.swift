@@ -243,5 +243,54 @@ do {
 
 }
 
+// D3: answer pages
+do {
+    let key = [
+        PageText(text: "Answers", box: PageRect(x: 0.4, y: 0.05, width: 0.2, height: 0.04)),
+        PageText(text: "1. 4, 5, 6", box: PageRect(x: 0.1, y: 0.15, width: 0.2, height: 0.03)),
+        PageText(text: "2. four six", box: PageRect(x: 0.1, y: 0.20, width: 0.2, height: 0.03)),
+        PageText(text: "Aufgabe 3: a; c; b.", box: PageRect(x: 0.1, y: 0.25, width: 0.2, height: 0.03))
+    ]
+    let entries = AnswerPages.parse(key)
+    check(entries.count == 3 && entries[0].answers == ["4", "5", "6"], "answer page: numbers after a task number")
+    check(entries[1].answers == ["four", "six"] && entries[2].answers == ["a", "c", "b"], "answer page: words, semicolons and 'Aufgabe'")
+    check(AnswerPages.isKeyPage(key), "answer page: heading and entries make a key page")
+    check(!AnswerPages.isKeyPage(Array(key.dropFirst())), "answer page: no heading, no key page")
+    check(AnswerPages.taskNumber(of: "3. Count and write.") == 3, "answer page: task number from the prompt")
+
+    let task = PlayTask(id: "p1-t1", kind: .numberInOrder, prompt: "1. Number.",
+                        items: [TaskItem(id: "a", label: "a", region: PageRect(x: 0.1, y: 0.1, width: 0.05, height: 0.03)), TaskItem(id: "b", label: "b", region: PageRect(x: 0.1, y: 0.2, width: 0.05, height: 0.03)),
+                                TaskItem(id: "c", label: "c", region: PageRect(x: 0.1, y: 0.3, width: 0.05, height: 0.03))])
+    let solved = AnswerPages.apply(entries, to: task)
+    check(solved.key?.order == ["a": 4, "b": 5, "c": 6] && solved.keySource == .answerPage, "answer page: key is set on a number task")
+    let other = PlayTask(id: "p1-t9", kind: .numberInOrder, prompt: "9. Number.", items: task.items)
+    check(AnswerPages.apply(entries, to: other).key == nil, "answer page: no entry for the task number leaves it open")
+    let wrongCount = PlayTask(id: "p1-t2", kind: .fillIn, prompt: "2. Write.", items: [task.items[0]])
+    check(AnswerPages.apply(entries, to: wrongCount).key == nil, "answer page: different number of answers leaves it open")
+}
+
+// D4: crosswords
+do {
+    // CAT across (slot 0), CAR down (slot 1) sharing the first letter, TEN down (slot 2) sharing CAT's last letter
+    let crossings = [CrosswordSolver.Crossing(a: 0, aPosition: 0, b: 1, bPosition: 0),
+                     CrosswordSolver.Crossing(a: 0, aPosition: 2, b: 2, bPosition: 0)]
+    let solved = CrosswordSolver.solve(lengths: [3, 3, 3], crossings: crossings, words: ["TEN", "CAR", "CAT"])
+    check(solved == ["CAT", "CAR", "TEN"], "crossword: words placed by length and crossing letters")
+    check(CrosswordSolver.solve(lengths: [3, 3], crossings: [], words: ["DOG", "PIG"]) == nil, "crossword: two possible fits are not guessed")
+    check(CrosswordSolver.solve(lengths: [3], crossings: [], words: ["HORSE"]) == nil, "crossword: no word of that length")
+}
+
+// D5: word search
+do {
+    let grid: [[Character]] = [Array("CATX"), Array("XOXX"), Array("XXGX"), Array("DOGX")]
+    check(WordSearch.find("cat", in: grid).count == 1, "word search: across")
+    let dog = WordSearch.find("DOG", in: grid)
+    check(dog.count == 1 && dog[0].columnStep == 1, "word search: DOG in the last row")
+    let solved = WordSearch.solve(words: ["CAT", "COG", "FISH"], grid: grid)
+    check(solved["CAT"]?.rowStep == 0 && solved["COG"]?.rowStep == 1 && solved["COG"]?.columnStep == 1, "word search: diagonal word")
+    check(solved["FISH"] == nil, "word search: a missing word is left out")
+    check(WordSearch.find("TAC", in: grid).first?.columnStep == -1, "word search: backwards")
+}
+
 print(failures == 0 ? "\nAll checks passed." : "\n\(failures) check(s) failed.")
 exit(failures == 0 ? 0 : 1)

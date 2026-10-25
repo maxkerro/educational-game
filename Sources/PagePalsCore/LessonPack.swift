@@ -76,6 +76,7 @@ public typealias TaskResponse = AnswerKey
 public enum KeySource: String, Codable, Sendable {
     case calculated   // worked out from the page text, e.g. "three + one ="
     case parent       // typed in by a grown-up
+    case answerPage   // read from the answer key printed in the book
 }
 
 public struct PlayTask: Codable, Equatable, Identifiable, Sendable {
