@@ -16,14 +16,14 @@ Updated 22 Oct 2026 · Master copy: `BACKLOG.md` in the repo · Overview of what
 
 ## Status at a glance
 
-Stories: **73** · ✅ done **13** · 🟡 partly **8** · ⬜ to do **52**
+Stories: **73** · ✅ done **13** · 🟡 partly **9** · ⬜ to do **51**
 
 | Epic | Stories | ✅ | 🟡 | ⬜ |
 |---|---:|---:|---:|---:|
 | [A · Open a book](#epic-a) | 6 | 1 | 2 | 3 |
 | [B · Recognise the tasks on a page](#epic-b) | 10 | 4 | 2 | 4 |
 | [C · Play: one interactive page per task](#epic-c) | 14 | 3 | 0 | 11 |
-| [D · Answers without a grown-up, offline](#epic-d) | 12 | 2 | 0 | 10 |
+| [D · Answers without a grown-up, offline](#epic-d) | 12 | 2 | 1 | 9 |
 | [E · Subjects: English, Math, German](#epic-e) | 3 | 0 | 1 | 2 |
 | [F · Game layer](#epic-f) | 7 | 0 | 0 | 7 |
 | [G · Parent area and review](#epic-g) | 7 | 1 | 0 | 6 |
@@ -375,16 +375,16 @@ _The app finds correct answers by itself, with rules first, then on-device model
 
 `Done` · `P0` · `S` · `M1` · Old E9-13.
 
-### D2 · Calculate every kind of maths task ⬜
+### D2 · Calculate every kind of maths task 🟡
 
 **As a** parent, **I want** all arithmetic tasks to be solved by the app, **so that** a Math book needs no typing.
 
-- [ ] + − × ÷ with digits, words and written columns
-- [ ] Missing number (3 + _ = 7), comparing (<, >, =), number sequences, simple equations
-- [ ] Money, time and measures with units
+- [x] + − × ÷ with digits and number words 0–100 (English, German), usual precedence
+- [x] Missing number (3 + _ = 7), comparing (<, >, =), number sequences with one gap
+- [ ] Written columns, money, time and measures with units
 - [ ] Each solved example from the sample books matches the book's key
 
-`To do` · `P0` · `M` · `M2`
+`Partly done` · `P0` · `M` · `M2`
 
 ### D3 · Read the answer pages of the book ⬜
 

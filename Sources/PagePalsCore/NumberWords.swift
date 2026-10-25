@@ -1,13 +1,37 @@
 import Foundation
 
-/// Number words 0...20 in English and German, and simple sums such as "three + one =".
+/// Number words 0...100 in English and German ("seven", "siebenundzwanzig"); sums are in `MathSolver`.
 public enum NumberWords {
-    private static let english = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
-                                  "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen",
-                                  "eighteen", "nineteen", "twenty"]
-    private static let german = ["null", "eins", "zwei", "drei", "vier", "fuenf", "sechs", "sieben", "acht", "neun", "zehn",
-                                 "elf", "zwoelf", "dreizehn", "vierzehn", "fuenfzehn", "sechzehn", "siebzehn",
-                                 "achtzehn", "neunzehn", "zwanzig"]
+    /// English words for 0...100 (index = number).
+    private static let english: [String] = {
+        let base = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+                    "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen",
+                    "eighteen", "nineteen"]
+        let tens = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"]
+        var all = base
+        for n in 20...99 {
+            let unit = n % 10
+            all.append(unit == 0 ? tens[n / 10] : tens[n / 10] + "-" + base[unit])
+        }
+        all.append("hundred")
+        return all
+    }()
+
+    /// German words for 0...100, written with "ue", "oe", "ss" (umlauts are folded before comparing).
+    private static let german: [String] = {
+        let base = ["null", "eins", "zwei", "drei", "vier", "fuenf", "sechs", "sieben", "acht", "neun", "zehn",
+                    "elf", "zwoelf", "dreizehn", "vierzehn", "fuenfzehn", "sechzehn", "siebzehn",
+                    "achtzehn", "neunzehn"]
+        let units = ["", "ein", "zwei", "drei", "vier", "fuenf", "sechs", "sieben", "acht", "neun"]
+        let tens = ["", "", "zwanzig", "dreissig", "vierzig", "fuenfzig", "sechzig", "siebzig", "achtzig", "neunzig"]
+        var all = base
+        for n in 20...99 {
+            let unit = n % 10
+            all.append(unit == 0 ? tens[n / 10] : units[unit] + "und" + tens[n / 10])
+        }
+        all.append("hundert")
+        return all
+    }()
 
     private static func fold(_ s: String) -> String {
         s.lowercased()
@@ -18,7 +42,7 @@ public enum NumberWords {
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// "4", "four" or "vier" -> 4. Anything else -> nil.
+    /// "4", "four", "vier" or "twenty-one" -> number. Anything else -> nil.
     public static func value(_ text: String) -> Int? {
         let t = fold(text)
         if let n = Int(t) { return n }
@@ -28,27 +52,20 @@ public enum NumberWords {
         return nil
     }
 
-    /// The English word for 0...20, otherwise the digits.
-    public static func word(_ n: Int) -> String {
-        (0..<english.count).contains(n) ? english[n] : String(n)
+    /// True for a German number word such as "vier" or "fünfzehn".
+    public static func isGerman(_ text: String) -> Bool {
+        let t = fold(text)
+        return t == "ein" || t == "eine" || (german.contains(t) && !english.contains(t))
     }
 
-    /// Solves "three + one =" (also "10 - 4 =", with en dash or minus sign) and gives the answer
-    /// in the same style as the question: words for words, digits for digits.
+    /// The word for 0...100 (English, or German when asked), otherwise the digits.
+    public static func word(_ n: Int, german useGerman: Bool = false) -> String {
+        let table = useGerman ? german : english
+        return (0..<table.count).contains(n) ? table[n] : String(n)
+    }
+
+    /// Solves a task line such as "three + one =" (see `MathSolver`).
     public static func answer(forSum text: String) -> String? {
-        var t = text
-        for dash in ["\u{2013}", "\u{2014}", "\u{2212}"] { t = t.replacingOccurrences(of: dash, with: "-") }
-        t = t.replacingOccurrences(of: "=", with: " ").trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard let opIndex = t.firstIndex(where: { $0 == "+" || $0 == "-" }) else { return nil }
-        let left = String(t[t.startIndex..<opIndex]).trimmingCharacters(in: .whitespaces)
-        let right = String(t[t.index(after: opIndex)...]).trimmingCharacters(in: .whitespaces)
-        guard !left.contains(" "), !right.contains(" "),
-              let a = value(left), let b = value(right) else { return nil }
-
-        let result = t[opIndex] == "+" ? a + b : a - b
-        guard result >= 0 else { return nil }
-        let usesDigits = Int(left) != nil && Int(right) != nil
-        return usesDigits ? String(result) : word(result)
+        MathSolver.solve(text)
     }
 }
