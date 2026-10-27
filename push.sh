@@ -53,7 +53,8 @@ args=()
 # First push of a branch: set its upstream on origin.
 git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1 ||
   args+=(-u origin "$(git rev-parse --abbrev-ref HEAD)")
-git push "${args[@]}"
+# macOS ships bash 3.2, where an empty array counts as unset under `set -u`
+git push ${args[@]+"${args[@]}"}
 status=$?
 [ $status -eq 0 ] && echo "[push] Pushed." || echo "[push] git push exited $status (see above)."
 exit $status
