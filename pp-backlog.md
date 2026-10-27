@@ -9,12 +9,12 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
 
 | ID | Name | Platform | Goal |
 |----|------|----------|------|
-| M1 | Play a real page | macOS | A real book page becomes playable pages (numbers, sums, ticks); the grown-up types answers where needed. |
-| M2 | Answers without a grown-up, offline | macOS | Sums, answer pages, crosswords and word searches are solved by rules; pictures are matched to words by an on-device model. |
-| M3 | All task types | macOS | Matching lines, multiple choice, circling, ordering, crossword, word search and open tasks have a page. |
-| M4 | Three subjects | macOS | Open an English, a Math or a German PDF workbook and get an interactive page for each task, with answers recognised. |
-| M5 | Game and parent area | macOS | Pal, stars, world map; progress, time limits, profiles, review editor. |
-| M6 | Release | macOS | Accessibility, localisation, signed and notarised app. |
+| M1 | Play a real page | Core app | A real book page becomes playable pages (numbers, sums, ticks); the grown-up types answers where needed. |
+| M2 | Answers without a grown-up, offline | Core app | Sums, answer pages, crosswords and word searches are solved by rules; pictures are matched to words by an on-device model. |
+| M3 | All task types | Core app | Matching lines, multiple choice, circling, ordering, crossword, word search and open tasks have a page. |
+| M4 | Three subjects | Core app | Open an English, a Math or a German PDF workbook and get an interactive page for each task, with answers recognised. |
+| M5 | Game and parent area | Game & parents | Pal, stars, world map; progress, time limits, profiles, review editor. |
+| M6 | Release | Release | Accessibility, localisation, signed and notarised app. |
 | IMP | Improvements | Ongoing | Smaller enhancements between milestones. |
 
 ## M1 — Play a real page
