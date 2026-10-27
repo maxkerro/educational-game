@@ -46,7 +46,7 @@ while read -r local_ref local_sha remote_ref remote_sha; do
   [ -z "${local_ref:-}" ] && continue
   [ "$local_sha" = "$ZERO" ] && continue # branch delete
   if [ "$remote_sha" = "$ZERO" ] || ! git cat-file -e "${remote_sha}^{commit}" 2>/dev/null; then
-    base=$(git rev-list "$local_sha" --not --remotes --max-count=30 | tail -1)
+    base=$(git rev-list "$local_sha" --not --remotes | tail -1)
     [ -z "$base" ] && continue
     if git rev-parse -q --verify "${base}^" >/dev/null; then range="${base}^..$local_sha"; else range="$local_sha"; fi
   else
@@ -78,7 +78,7 @@ $(awk -v id="$id" '/^### /{p=index($0, "### " id " ")==1} /^## /{p=0} p' "$BACKL
   done
 fi
 
-prompt="You are reviewing commits about to be pushed to $(basename "$ROOT"). Review the diff for: correctness bugs, security and privacy issues, data loss, missed edge cases, whether each acceptance criterion of the stories below is implemented AND covered by a unit or system test, and docs/backlog left out of date.
+prompt="You are reviewing commits about to be pushed to $(basename "$ROOT"). Review the diff for: correctness bugs, security and privacy issues, data loss, missed edge cases, anything that must not be in a public repository (secrets, personal data, scans or pages of copyrighted workbooks, large binaries), whether each acceptance criterion of the stories below is implemented AND covered by a unit or system test, and docs/backlog left out of date.
 Report in this exact Markdown structure (write 'None.' under an empty heading):
 ## Blocking
 ## Should-fix

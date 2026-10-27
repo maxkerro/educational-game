@@ -154,7 +154,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
 - **Story:** As a maintainer, I want checks to run before every push so that a bad change cannot reach GitHub.
 - **Description:** Safe for children, works without the internet. Old E0-4, E7-6.
 - **Acceptance criteria:**
-  - [x] `swift run PagePalsChecks` has about 45 checks and runs first in the pre-push hook
+  - [x] `swift run PagePalsChecks` has about 100 checks and runs first in `push.sh`, before `git push` and the review hook
   - [ ] Recognition quality checks on the test pages (B10)
   - [ ] GitHub Actions runs build and checks
 - **Tests:** 
@@ -189,7 +189,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
 - **Story:** As a maintainer, I want `./push.sh` to run the checks and an Opus review before the push so that only checked work reaches GitHub.
 - **Description:** Easy to build without Xcode, safe to publish. Old E0-8.
 - **Acceptance criteria:**
-  - [x] push.sh and hooks/pre-push exist; checks run first, then the Opus review
+  - [x] `push.sh` and `.githooks/pre-push` exist; `push.sh` runs the checks and build first, then `git push` starts the Opus review hook
   - [ ] A full run passes once (Claude login must be renewed first)
 - **Tests:** 
 - **Commits:** 
@@ -222,7 +222,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Source 'answer page' shown to the grown-up (D12)
 - **Tests:** Sources/PagePalsChecks/main.swift (AC1)
 - **Commits:** b7dbbbf
-- **Notes:** Old id D3. Partly done.
+- **Notes:** Old id D3. Partly done. Review 1 (2026-10-27): heading must consist only of key words ('Answer the questions' is a task page); entries keep their page/unit group and a task only gets a key when exactly one entry fits (pass the printed page to apply); fill-in success test added. Multi-word answers need a comma in the key.
 
 ### PP-034 — Solve crosswords from the printed word list (D4)
 - **Status:** doing
@@ -235,7 +235,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Fed by the recognised crossword grid (B9)
 - **Tests:** Sources/PagePalsChecks/main.swift (AC1, AC2)
 - **Commits:** b7dbbbf
-- **Notes:** Old id D4. Partly done.
+- **Notes:** Old id D4. Partly done. Review 1: the same word listed twice is not a second solution; sharp s counts as one letter.
 
 ### PP-035 — Solve word searches (D5)
 - **Status:** doing
@@ -248,7 +248,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Fed by the recognised letter grid (B9)
 - **Tests:** Sources/PagePalsChecks/main.swift (AC1, AC2)
 - **Commits:** b7dbbbf
-- **Notes:** Old id D5. Partly done.
+- **Notes:** Old id D5. Partly done. Review 1: palindromes (MUM) count once; all 8 directions, found-twice and sharp s are tested.
 
 ### PP-036 — Match pictures to words with an on-device model (D6)
 - **Status:** todo
@@ -279,7 +279,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
 - **Status:** todo
 - **Area:** Answers without a grown-up, offline · **Points:** 5 · **Priority:** Must · **Depends on:** —
 - **Story:** As a maintainer, I want to try the on-device options on the real sample pages so that I choose by measured results, not by guesses.
-- **Description:** The app finds correct answers by itself, with rules first, then on-device models. No internet, no cloud API. See 'Offline AI options' below.
+- **Description:** The app finds correct answers by itself, with rules first, then on-device models. No internet, no cloud API. See 'Offline AI options' in docs/OVERVIEW.md.
 - **Acceptance criteria:**
   - [ ] Try first, because they run on macOS 15 on the test Mac: an open vision-language model with MLX Swift (for example SmolVLM2 or Qwen2-VL, 4-bit) and a Core ML CLIP model
   - [ ] Apple Foundation Models only if the Mac is upgraded to a newer macOS (it is not available on macOS 15)

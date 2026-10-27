@@ -256,6 +256,9 @@ do {
     check(entries[1].answers == ["four", "six"] && entries[2].answers == ["a", "c", "b"], "answer page: words, semicolons and 'Aufgabe'")
     check(AnswerPages.isKeyPage(key), "answer page: heading and entries make a key page")
     check(!AnswerPages.isKeyPage(Array(key.dropFirst())), "answer page: no heading, no key page")
+    let taskPage = [PageText(text: "Answer the questions", box: PageRect(x: 0.3, y: 0.05, width: 0.4, height: 0.04))] + Array(key.dropFirst())
+    check(!AnswerPages.isKeyPage(taskPage), "answer page: 'Answer the questions' is a task page, not a key")
+    check(AnswerPages.isKeyPage([PageText(text: "Answer key", box: PageRect(x: 0.3, y: 0.05, width: 0.4, height: 0.04))] + Array(key.dropFirst())), "answer page: 'Answer key' heading")
     check(AnswerPages.taskNumber(of: "3. Count and write.") == 3, "answer page: task number from the prompt")
 
     let task = PlayTask(id: "p1-t1", kind: .numberInOrder, prompt: "1. Number.",
@@ -265,8 +268,31 @@ do {
     check(solved.key?.order == ["a": 4, "b": 5, "c": 6] && solved.keySource == .answerPage, "answer page: key is set on a number task")
     let other = PlayTask(id: "p1-t9", kind: .numberInOrder, prompt: "9. Number.", items: task.items)
     check(AnswerPages.apply(entries, to: other).key == nil, "answer page: no entry for the task number leaves it open")
+    let fillTask = PlayTask(id: "p1-t2", kind: .fillIn, prompt: "2. Write.",
+                            items: [TaskItem(id: "x", label: "x", region: PageRect(x: 0.1, y: 0.1, width: 0.05, height: 0.03)),
+                                    TaskItem(id: "y", label: "y", region: PageRect(x: 0.1, y: 0.2, width: 0.05, height: 0.03))])
+    let filled = AnswerPages.apply(entries, to: fillTask)
+    check(filled.key?.text == ["x": "four", "y": "six"] && filled.keySource == .answerPage, "answer page: key is set on a fill-in task")
     let wrongCount = PlayTask(id: "p1-t2", kind: .fillIn, prompt: "2. Write.", items: [task.items[0]])
     check(AnswerPages.apply(entries, to: wrongCount).key == nil, "answer page: different number of answers leaves it open")
+
+    // Task numbers restart on every page: a grouped key is only used for the matching page
+    let paged = [
+        PageText(text: "Answers", box: PageRect(x: 0.4, y: 0.05, width: 0.2, height: 0.04)),
+        PageText(text: "Page 10", box: PageRect(x: 0.1, y: 0.10, width: 0.2, height: 0.03)),
+        PageText(text: "1. 4, 5, 6", box: PageRect(x: 0.1, y: 0.15, width: 0.2, height: 0.03)),
+        PageText(text: "Page 11", box: PageRect(x: 0.1, y: 0.20, width: 0.2, height: 0.03)),
+        PageText(text: "1. 7, 8, 9", box: PageRect(x: 0.1, y: 0.25, width: 0.2, height: 0.03)),
+        PageText(text: "2. 1, 2, 3", box: PageRect(x: 0.1, y: 0.30, width: 0.2, height: 0.03))
+    ]
+    let pagedEntries = AnswerPages.parse(paged)
+    check(pagedEntries.count == 3 && pagedEntries[0].group == 10 && pagedEntries[1].group == 11, "answer page: page headings group the entries")
+    check(AnswerPages.apply(pagedEntries, to: task, group: 11).key?.order == ["a": 7, "b": 8, "c": 9], "answer page: task 1 on page 11 gets the page 11 key")
+    check(AnswerPages.apply(pagedEntries, to: task, group: 10).key?.order == ["a": 4, "b": 5, "c": 6], "answer page: task 1 on page 10 gets the page 10 key")
+    check(AnswerPages.apply(pagedEntries, to: task).key == nil, "answer page: no page given, no guess")
+    let twice = AnswerPages.parse([PageText(text: "1. 1, 2, 3", box: PageRect(x: 0.1, y: 0.15, width: 0.2, height: 0.03)),
+                                   PageText(text: "1. 4, 5, 6", box: PageRect(x: 0.1, y: 0.20, width: 0.2, height: 0.03))])
+    check(AnswerPages.apply(twice, to: task).key == nil, "answer page: the same task number twice in one group is not guessed")
 }
 
 // D4: crosswords
@@ -278,6 +304,8 @@ do {
     check(solved == ["CAT", "CAR", "TEN"], "crossword: words placed by length and crossing letters")
     check(CrosswordSolver.solve(lengths: [3, 3], crossings: [], words: ["DOG", "PIG"]) == nil, "crossword: two possible fits are not guessed")
     check(CrosswordSolver.solve(lengths: [3], crossings: [], words: ["HORSE"]) == nil, "crossword: no word of that length")
+    check(CrosswordSolver.solve(lengths: [3, 3], crossings: [], words: ["DOG", "DOG"]) == ["DOG", "DOG"], "crossword: the same word listed twice is not a second solution")
+    check(CrosswordSolver.solve(lengths: [6], crossings: [], words: ["Stra\u{00DF}e"]) == ["Stra\u{00DF}e"], "crossword: sharp s counts as one letter")
 }
 
 // D5: word search
@@ -290,6 +318,24 @@ do {
     check(solved["CAT"]?.rowStep == 0 && solved["COG"]?.rowStep == 1 && solved["COG"]?.columnStep == 1, "word search: diagonal word")
     check(solved["FISH"] == nil, "word search: a missing word is left out")
     check(WordSearch.find("TAC", in: grid).first?.columnStep == -1, "word search: backwards")
+    func direction(_ word: String, _ grid: [[Character]]) -> String {
+        WordSearch.find(word, in: grid).first.map { "\($0.rowStep),\($0.columnStep)" } ?? "none"
+    }
+    let eight: [[Character]] = [Array("ABCDE"), Array("FGHIJ"), Array("KLMNO"), Array("PQRST"), Array("UVWXY")]
+    check(direction("GL", eight) == "1,0", "word search: downwards")
+    check(direction("LG", eight) == "-1,0", "word search: upwards")
+    check(direction("GM", eight) == "1,1", "word search: diagonal down-right")
+    check(direction("SM", eight) == "-1,-1", "word search: diagonal up-left")
+    check(direction("HL", eight) == "1,-1", "word search: diagonal down-left")
+    check(direction("LH", eight) == "-1,1", "word search: diagonal up-right")
+    check(direction("AB", eight) == "0,1", "word search: across")
+    check(direction("BA", eight) == "0,-1", "word search: backwards on a row")
+    let twiceGrid: [[Character]] = [Array("ABX"), Array("XXX"), Array("ABX")]
+    check(WordSearch.find("AB", in: twiceGrid).count == 2 && WordSearch.solve(words: ["AB"], grid: twiceGrid).isEmpty, "word search: a word found twice is left out")
+    let mum: [[Character]] = [Array("MUMX"), Array("XXXX")]
+    check(WordSearch.find("MUM", in: mum).count == 1 && WordSearch.solve(words: ["MUM"], grid: mum)["MUM"] != nil, "word search: a palindrome counts once")
+    let strasse: [[Character]] = [Array("STRA\u{00DF}E")]
+    check(WordSearch.find("Stra\u{00DF}e", in: strasse).count == 1, "word search: sharp s counts as one letter")
 }
 
 print(failures == 0 ? "\nAll checks passed." : "\n\(failures) check(s) failed.")

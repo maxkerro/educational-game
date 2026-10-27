@@ -17,16 +17,13 @@ public enum WordSearch {
 
     private static let directions: [(Int, Int)] = [(0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (1, -1), (-1, 1), (-1, -1)]
 
-    private static func letters(_ text: String) -> [String] {
-        text.uppercased().filter { $0.isLetter }.map { String($0) }
-    }
-
     /// Every place where the word is written in the grid (rows may have different lengths).
     public static func find(_ word: String, in grid: [[Character]]) -> [Placement] {
-        let target = letters(word)
+        let target = LetterFold.letters(word)
         guard target.count >= 2 else { return [] }
-        let cells: [[String]] = grid.map { row in row.map { String($0).uppercased() } }
+        let cells: [[String]] = grid.map { row in row.map { LetterFold.letters(String($0)).first ?? "" } }
         var found: [Placement] = []
+        var seen = Set<String>()
         for r in cells.indices {
             for c in cells[r].indices where cells[r][c] == target[0] {
                 for (dr, dc) in directions {
@@ -39,7 +36,12 @@ public enum WordSearch {
                             break
                         }
                     }
-                    if matches { found.append(Placement(row: r, column: c, rowStep: dr, columnStep: dc, length: target.count)) }
+                    if matches {
+                        let place = Placement(row: r, column: c, rowStep: dr, columnStep: dc, length: target.count)
+                        // A palindrome (MUM, ANNA) is the same cells read from the other end: count it once.
+                        let cellsKey = place.cells.map { "\($0.row),\($0.column)" }.sorted().joined(separator: ";")
+                        if seen.insert(cellsKey).inserted { found.append(place) }
+                    }
                 }
             }
         }

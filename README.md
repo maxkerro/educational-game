@@ -67,6 +67,7 @@ Workbooks are the user's own files and are processed locally; they are never com
 ## Pushing
 
 - `./push.sh` runs `swift run PagePalsChecks` and `swift build`, then `git push`. The pre-push hook (`.githooks/pre-push`) then asks Opus to review the commits being pushed.
+- A plain `git push` runs only the review hook, not the checks; use `./push.sh`. After a fresh clone run `git config core.hooksPath .githooks` once (`push.sh` also sets it).
 - `./push.sh --no-verify` runs the same checks but skips the review hook.
 - The review needs the Claude Code CLI to be logged in (`claude`, then `/login`). Findings are saved to `.review/last-review.md` and the push log to `.review/last-push.log`; both stay local (ignored by git). Tell Claude "Fix findings" to work through them.
 - `scripts/backlog_board.py` turns `pp-backlog.md` into the data of the backlog board.

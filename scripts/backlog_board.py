@@ -74,12 +74,18 @@ def set_status(text, changes):
     return ''.join(out)
 
 if __name__ == '__main__':
+    usage = 'usage: backlog_board.py to-json <backlog.md> | set-status <backlog.md> ID=status ...'
+    if len(sys.argv) < 3 or sys.argv[1] not in ('to-json', 'set-status'):
+        print(usage, file=sys.stderr); sys.exit(2)
     cmd, path = sys.argv[1], sys.argv[2]
     text = open(path, encoding='utf-8').read()
     if cmd == 'to-json':
         data, status = parse(text)
         print(json.dumps({'data': data, 'state': {'status': status,
               'updatedAt': datetime.datetime.now(datetime.timezone.utc).isoformat()}}))
-    elif cmd == 'set-status':
-        changes = dict(a.split('=', 1) for a in sys.argv[3:])
-        open(path, 'w', encoding='utf-8').write(set_status(text, changes))
+    else:
+        pairs = [a.split('=', 1) for a in sys.argv[3:]]
+        if not pairs or any(len(p) != 2 or p[1] not in ('todo', 'doing', 'done') for p in pairs):
+            print(usage + '  (status: todo, doing or done)', file=sys.stderr); sys.exit(2)
+        new_text = set_status(text, dict(pairs))   # compute first, so a failure never truncates the file
+        open(path, 'w', encoding='utf-8').write(new_text)
