@@ -11,3 +11,6 @@ samples/
 *.pdf
 Books/
 build/
+
+# Review findings and push logs stay local
+.review/

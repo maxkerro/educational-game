@@ -2,7 +2,7 @@
 
 A native macOS app that turns the tasks in a scanned or digital **PDF workbook** into **interactive mini-games**, so children want to do their exercises.
 
-> Status: planning + project skeleton. See [BACKLOG.md](BACKLOG.md) for the roadmap.
+> Status: planning + project skeleton. See [pp-backlog.md](pp-backlog.md) for the roadmap.
 
 ## The idea in one paragraph
 
@@ -16,7 +16,8 @@ Researched popular children's learning apps (Khan Academy Kids, Prodigy Math, Du
 
 | File | Purpose |
 |---|---|
-| [BACKLOG.md](BACKLOG.md) | Prioritised epics, stories, acceptance criteria, milestones |
+| [pp-backlog.md](pp-backlog.md) | Stories `PP-001`…, acceptance criteria, milestones (source of the board) |
+| [docs/OVERVIEW.md](docs/OVERVIEW.md) | Principles, personas, test Mac, offline AI options, open questions |
 | [docs/CONCEPT.md](docs/CONCEPT.md) | Product concept, child experience, task-type catalogue |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Import pipeline, data model, tech choices |
 | [docs/RESEARCH.md](docs/RESEARCH.md) | Market research and sources |
@@ -42,7 +43,7 @@ build-app.sh                  Builds build/PagePals.app
 prototype/index.html          Playable browser prototype of the child experience (open in any browser)
 docs/                         Concept, architecture, research, picture handling
 tools/picture-prototype/      Python prototype used to tune picture detection
-BACKLOG.md                    Roadmap
+pp-backlog.md                 Roadmap (stories and acceptance criteria)
 ```
 
 
@@ -62,3 +63,10 @@ Note: the Swift code was written without access to a Swift compiler, so the firs
 ## Content and privacy
 
 Workbooks are the user's own files and are processed locally; they are never committed to this repo (`samples/` is git-ignored). The app is designed for children: no ads, no tracking, no dark patterns, no guilt-trip exits.
+
+## Pushing
+
+- `./push.sh` runs `swift run PagePalsChecks` and `swift build`, then `git push`. The pre-push hook (`.githooks/pre-push`) then asks Opus to review the commits being pushed.
+- `./push.sh --no-verify` runs the same checks but skips the review hook.
+- The review needs the Claude Code CLI to be logged in (`claude`, then `/login`). Findings are saved to `.review/last-review.md` and the push log to `.review/last-push.log`; both stay local (ignored by git). Tell Claude "Fix findings" to work through them.
+- `scripts/backlog_board.py` turns `pp-backlog.md` into the data of the backlog board.
