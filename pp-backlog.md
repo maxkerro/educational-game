@@ -1,6 +1,6 @@
 # PagePals Backlog
 
-Project: PagePals (`PP`) · Repo: https://github.com/maxkerro/educational-game · Board: (not published yet)
+Project: PagePals (`PP`) · Repo: https://github.com/maxkerro/educational-game · Board: https://claude.ai/artifact/8BrEbdQn5Re1a3Lh7shBFb
 Updated: 2026-10-27
 
 Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-073); the old number is kept in each title, e.g. `(D2)`. Status `doing` on a story means partly done; unchecked criteria are still open.
