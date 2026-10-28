@@ -154,7 +154,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
 - **Story:** As a maintainer, I want checks to run before every push so that a bad change cannot reach GitHub.
 - **Description:** Safe for children, works without the internet. Old E0-4, E7-6.
 - **Acceptance criteria:**
-  - [x] `swift run PagePalsChecks` has over 170 checks and runs first in `push.sh`, before `git push` and the review hook
+  - [x] `swift run PagePalsChecks` has over 200 checks and runs first in `push.sh`, before `git push` and the review hook
   - [ ] Recognition quality checks on the test pages (B10)
   - [ ] GitHub Actions runs build and checks
 - **Tests:** 
@@ -328,12 +328,12 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [x] Tasks on the left and the right page are found separately
   - [ ] The image is split at the gutter
   - [ ] The printed page number is read and shown
-- **Tests:** 
+- **Tests:** Sources/PagePalsChecks/main.swift (logic only)
 - **Commits:** 
-- **Notes:** Old id A3. Partly done.
+- **Notes:** Old id A3. Partly done. Round 1 (M3): `PageSplit` finds the gutter from the column darkness (falls back to the centre) and maps boxes of the whole scan to the left or right page. Not yet used by the importer.
 
 ### PP-004 — Keep imported books in a library (A4)
-- **Status:** todo
+- **Status:** doing
 - **Area:** Open a book · **Points:** 8 · **Priority:** Must · **Depends on:** —
 - **Story:** As a parent, I want a book to be recognised once and then stay in my library so that it opens fast the next time and my answers are not lost.
 - **Description:** A grown-up opens a PDF workbook and the app keeps it. Replaces E1-7, E9-2, E6-6.
@@ -342,21 +342,21 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Cut-out pictures are saved as files, not recomputed
   - [ ] Rename and delete a book
   - [ ] Pack has a version number and loads older versions
-- **Tests:** 
+- **Tests:** Sources/PagePalsChecks/main.swift (logic only)
 - **Commits:** 
-- **Notes:** Old id A4.
+- **Notes:** Old id A4. Round 1 (M3): `LessonLibrary` saves and loads a book folder (`pack.json` + picture files, atomic write), lists, renames, deletes, refuses ids with a path, loads packs without version or language and refuses newer ones. Not yet used by the app.
 
 ### PP-005 — See import progress, cancel and resume (A5)
-- **Status:** todo
+- **Status:** doing
 - **Area:** Open a book · **Points:** 5 · **Priority:** Should · **Depends on:** —
 - **Story:** As a parent, I want to see how far the import is and to stop it so that a long book does not block me.
 - **Description:** A grown-up opens a PDF workbook and the app keeps it. Old E1-10.
 - **Acceptance criteria:**
   - [ ] Progress per page, Cancel button
   - [ ] Resumes after quit without redoing finished pages
-- **Tests:** 
+- **Tests:** Sources/PagePalsChecks/main.swift (logic only)
 - **Commits:** 
-- **Notes:** Old id A5.
+- **Notes:** Old id A5. Round 1 (M3): `ImportProgress` counts finished pages, saves them and resumes without redoing them; a changed page count starts fresh. The progress bar and Cancel button are not built.
 
 ### PP-008 — Cut out the pictures exactly as in the book (B2)
 - **Status:** doing
@@ -394,9 +394,9 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [x] Numbers, fill-in and tick are chosen from the shapes found
   - [ ] Words in the header ('Draw lines', 'Circle', 'Match', 'Colour', 'Crossword', 'Read and choose') choose the type
   - [ ] Unknown tasks become open tasks
-- **Tests:** 
+- **Tests:** Sources/PagePalsChecks/main.swift (logic only)
 - **Commits:** 
-- **Notes:** Old id B7. Partly done.
+- **Notes:** Old id B7. Partly done. Round 1 (M3): `TaskTypeClassifier` chooses the kind from header words (English, German; whole words) and shapes. `TaskBuilder` does not use it yet because the other kinds have no page builders or players.
 
 ### PP-014 — Link each picture to its word or sentence (B8)
 - **Status:** todo
@@ -439,7 +439,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
 - **Notes:** Old id B10.
 
 ### PP-020 — Draw lines to match (C4)
-- **Status:** todo
+- **Status:** doing
 - **Area:** Play: one interactive page per task · **Points:** 8 · **Priority:** Must · **Depends on:** —
 - **Story:** As a child, I want to draw a line from a picture to its word so that I can match like in my book.
 - **Description:** The child sees the book page and answers on it. Old E3-5.
@@ -447,9 +447,9 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Drag from a start point to an end point, line snaps
   - [ ] Wrong line wiggles back gently
   - [ ] Works picture-word and picture-picture
-- **Tests:** 
+- **Tests:** Sources/PagePalsChecks/main.swift (logic only)
 - **Commits:** 
-- **Notes:** Old id C4.
+- **Notes:** Old id C4. Round 1 (M3): `LineMatching` judges where a dragged line ends (snap, wrong, missed). The drag view is not built.
 
 ### PP-021 — Choose one answer (C5)
 - **Status:** todo
@@ -500,16 +500,16 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
 - **Notes:** Old id C8.
 
 ### PP-025 — Put things in order (C9)
-- **Status:** todo
+- **Status:** doing
 - **Area:** Play: one interactive page per task · **Points:** 5 · **Priority:** Should · **Depends on:** —
 - **Story:** As a child, I want to drag words, sentences or pictures into order so that I can do ordering tasks.
 - **Description:** The child sees the book page and answers on it.
 - **Acceptance criteria:**
   - [ ] Drag and drop with snap
   - [ ] Feedback per position
-- **Tests:** 
+- **Tests:** Sources/PagePalsChecks/main.swift (logic only)
 - **Commits:** 
-- **Notes:** Old id C9.
+- **Notes:** Old id C9. Round 1 (M3): `OrderingBoard` starts unsolved, moves items and gives the answer in the key's shape. The drag view is not built.
 
 ### PP-026 — Do open tasks on paper and confirm (C10)
 - **Status:** todo

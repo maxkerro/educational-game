@@ -526,5 +526,113 @@ do {
     }
 }
 
+// M3 logic: PP-013 task type, PP-004 library, PP-005 progress, PP-020 line matching, PP-025 ordering, PP-003 page split
+func closeTo(_ a: Double, _ b: Double) -> Bool { abs(a - b) < 1e-6 }
+
+do {
+    check(TaskTypeClassifier.kind(forHeader: "2. Draw lines from the pictures to the words.") == .matching, "PP-013: draw lines is matching")
+    check(TaskTypeClassifier.kind(forHeader: "Tick correct or wrong.") == .trueFalse, "PP-013: tick is true/false")
+    check(TaskTypeClassifier.kind(forHeader: "Colour the stick.") == .openTask, "PP-013: 'stick' is not 'tick'")
+    check(TaskTypeClassifier.kind(forHeader: "Read and choose.") == .multipleChoice, "PP-013: read and choose")
+    check(TaskTypeClassifier.kind(forHeader: "Complete the crossword.") == .crossword, "PP-013: crossword before complete")
+    check(TaskTypeClassifier.kind(forHeader: "Finde die Wörter im Buchstabengitter.") == .wordSearch, "PP-013: German word search")
+    check(TaskTypeClassifier.kind(forHeader: "Number the pictures.") == .numberInOrder, "PP-013: number the pictures")
+    check(TaskTypeClassifier.kind(forHeader: "Write the numbers.") == .fillIn, "PP-013: write the numbers is fill-in")
+    check(TaskTypeClassifier.kind(forHeader: "Look at the page.") == nil, "PP-013: no rule gives nil")
+    check(TaskTypeClassifier.classify(header: "1. Number.", shapes: .init(emptyCircles: 9)) == .numberInOrder, "PP-013: empty circles give numbering")
+    check(TaskTypeClassifier.classify(header: "Match.", shapes: .init(tickCircles: 8)) == .matching, "PP-013: structural words beat shapes")
+    check(TaskTypeClassifier.classify(header: "Look.", shapes: .init(tickCircles: 8)) == .trueFalse, "PP-013: tick circles give true/false")
+    check(TaskTypeClassifier.classify(header: "Look.", shapes: .init(answerBars: 3)) == .fillIn, "PP-013: answer bars give fill-in")
+    check(TaskTypeClassifier.classify(header: "Look.") == .openTask, "PP-013: unknown task is an open task")
+}
+
+do {
+    let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("pp-lib-" + UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: tmp) }
+    let lib = LessonLibrary(root: tmp)
+    let task = PlayTask(id: "t1", kind: .fillIn, prompt: "p", items: [TaskItem(id: "a")], key: AnswerKey(text: ["a": "4"]), confidence: 0.8, keySource: .calculated)
+    let pack = LessonPack(title: "Maths 1", language: "en", pages: [BookPage(id: "p1", number: 1, imageFile: "p1.png", tasks: [task])])
+    try? lib.save(pack, id: "maths-1")
+    check((try? lib.load(id: "maths-1")) == pack, "PP-004: pack is read back as written")
+    check(lib.list().map(\.title) == ["Maths 1"] && lib.list().first?.pageCount == 1, "PP-004: library lists the book")
+    try? lib.rename(id: "maths-1", to: " Maths One ")
+    check((try? lib.load(id: "maths-1"))?.title == "Maths One", "PP-004: rename keeps the rest")
+    try? lib.writeImage(Data([1, 2, 3]), named: "p1-a.png", book: "maths-1")
+    check(lib.imageURL(named: "p1-a.png", book: "maths-1") != nil && lib.imageURL(named: "nope.png", book: "maths-1") == nil, "PP-004: cut-out pictures are kept as files")
+    var badName = false
+    do { try lib.save(pack, id: "../x") } catch LibraryError.badName { badName = true } catch {}
+    check(badName, "PP-004: ids with a path are refused")
+    try? lib.delete(id: "maths-1")
+    check(lib.list().isEmpty, "PP-004: deleted book is gone")
+
+    let old = Data(#"{"title":"Old","pages":[{"id":"p1","number":1,"imageFile":"p1.png","tasks":[{"id":"t","kind":"fillIn","prompt":"x"}]}]}"#.utf8)
+    let migrated = try? LessonLibrary.decode(old)
+    check(migrated?.language == "en" && migrated?.pages.first?.tasks.first?.confidence == 1.0 && migrated?.version == 1, "PP-004: an older pack is loaded with defaults")
+    var newer: LibraryError?
+    do { _ = try LessonLibrary.decode(Data(#"{"version":99,"title":"x","language":"en","pages":[]}"#.utf8)) } catch let e as LibraryError { newer = e } catch {}
+    check(newer == .tooNew(99), "PP-004: a pack from a newer app is refused, not misread")
+}
+
+do {
+    var p = ImportProgress(pageCount: 4)
+    p.finish(0); p.finish(1); p.finish(9)
+    check(closeTo(p.fraction, 0.5) && p.nextPage == 2 && !p.isDone, "PP-005: progress counts finished pages, ignores bad numbers")
+    p.cancel()
+    let file = FileManager.default.temporaryDirectory.appendingPathComponent("pp-prog-" + UUID().uuidString + ".json")
+    defer { try? FileManager.default.removeItem(at: file) }
+    try? p.save(to: file)
+    let back = ImportProgress.load(from: file, pageCount: 4)
+    check(back.finished == [0, 1] && !back.cancelled && back.nextPage == 2, "PP-005: resume keeps finished pages and clears the cancel")
+    check(ImportProgress.load(from: file, pageCount: 5).finished.isEmpty, "PP-005: a book with another page count starts fresh")
+    var all = back
+    [2, 3].forEach { all.finish($0) }
+    check(all.isDone && all.nextPage == nil, "PP-005: all pages finished")
+    check(closeTo(ImportProgress(pageCount: 0).fraction, 1), "PP-005: empty book is done")
+}
+
+do {
+    let a = LineMatching.Target(id: "A", region: PageRect(x: 0.1, y: 0.1, width: 0.1, height: 0.1))
+    let b = LineMatching.Target(id: "B", region: PageRect(x: 0.6, y: 0.1, width: 0.1, height: 0.1))
+    let key = AnswerKey(pairs: ["s": "A"])
+    check(LineMatching.drop(from: "s", atX: 0.15, y: 0.15, targets: [a, b], key: key) == .snapped("A"), "PP-020: right target snaps")
+    check(LineMatching.drop(from: "s", atX: 0.65, y: 0.15, targets: [a, b], key: key) == .wrong("B"), "PP-020: wrong target wiggles back")
+    check(LineMatching.drop(from: "s", atX: 0.4, y: 0.9, targets: [a, b], key: key) == .missed, "PP-020: drop on nothing is missed")
+    check(LineMatching.drop(from: "s", atX: 0.65, y: 0.15, targets: [a, b], key: nil) == .snapped("B"), "PP-020: without a key a drop snaps for the grown-up to check")
+    check(LineMatching.drop(from: "s", atX: 0.209, y: 0.15, targets: [a, b], key: key) == .snapped("A"), "PP-020: a little slack around a target")
+    check(LineMatching.drop(from: "A", atX: 0.15, y: 0.15, targets: [a, b], key: nil) == .missed, "PP-020: a line cannot end on its own start")
+}
+
+do {
+    let solution = ["a", "b", "c"]
+    var board = OrderingBoard.start(solution: solution)
+    check(board.itemIds == ["b", "c", "a"] && board.itemIds != solution, "PP-025: board does not start solved")
+    let task = PlayTask(id: "o", kind: .numberInOrder, prompt: "Order", items: solution.map { TaskItem(id: $0) }, key: OrderingBoard.key(solution: solution))
+    check(!TaskEvaluator.evaluate(task: task, response: board.response()).isComplete, "PP-025: start is not complete")
+    board.move(from: 2, to: 5)
+    check(board.itemIds == ["b", "c", "a"], "PP-025: move out of range does nothing")
+    board.move(from: 2, to: 0)
+    check(board.itemIds == solution && TaskEvaluator.evaluate(task: task, response: board.response()).isComplete, "PP-025: dragging into order completes the task")
+    check(OrderingBoard.start(solution: ["x"]).itemIds == ["x"], "PP-025: one item stays")
+}
+
+do {
+    var profile = [Double](repeating: 0.1, count: 1000)
+    for i in 495...505 { profile[i] = 0.8 }
+    check(abs(PageSplit.gutter(profile: profile) - 0.5) < 0.01, "PP-003: dark gutter in the middle is found")
+    var off = [Double](repeating: 0.1, count: 1000)
+    for i in 450...460 { off[i] = 0.8 }
+    check(abs(PageSplit.gutter(profile: off) - 0.4555) < 0.01, "PP-003: gutter off the centre is found")
+    check(PageSplit.gutter(profile: [Double](repeating: 0.2, count: 1000)) == 0.5, "PP-003: no gutter falls back to the centre")
+    check(PageSplit.gutter(profile: [0.1, 0.2]) == 0.5, "PP-003: too short a profile falls back to the centre")
+    check(PageSplit.isSpread(aspect: 1.4) && !PageSplit.isSpread(aspect: 0.7), "PP-003: wide scan is a spread")
+    let h = PageSplit.halves(gutter: 0.5)
+    check(closeTo(h.left.width, 0.5) && closeTo(h.right.x, 0.5), "PP-003: halves meet at the gutter")
+    let right = PageSplit.local(PageRect(x: 0.6, y: 0.2, width: 0.1, height: 0.1), rightHalf: true, gutter: 0.5)
+    check(right.map { closeTo($0.x, 0.2) && closeTo($0.width, 0.2) } == true, "PP-003: right page rectangle in page coordinates")
+    check(PageSplit.local(PageRect(x: 0.6, y: 0.2, width: 0.1, height: 0.1), rightHalf: false, gutter: 0.5) == nil, "PP-003: a box on the other page is not on this one")
+    let left = PageSplit.local(PageRect(x: 0.1, y: 0.2, width: 0.2, height: 0.1), rightHalf: false, gutter: 0.5)
+    check(left.map { closeTo($0.x, 0.2) && closeTo($0.width, 0.4) } == true, "PP-003: left page rectangle in page coordinates")
+}
+
 print(failures == 0 ? "\nAll checks passed." : "\n\(failures) check(s) failed.")
 exit(failures == 0 ? 0 : 1)
