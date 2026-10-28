@@ -31,13 +31,28 @@ public enum AnswerPages {
     private static let fillerWords: Set<String> = ["answer", "zu", "to", "for", "of", "der", "des"]
     private static let groupWords: Set<String> = ["page", "pages", "p", "seite", "seiten", "s", "unit", "lektion", "kapitel", "lesson"]
 
-    private static func isKeyHeading(_ text: String, isTopmost: Bool) -> Bool {
-        var words = text.precomposedStringWithCanonicalMapping.lowercased()
+    private static func tokens(_ text: String) -> [String] {
+        text.precomposedStringWithCanonicalMapping.lowercased()
             .components(separatedBy: CharacterSet.alphanumerics.inverted)
             .filter { !$0.isEmpty }
+    }
+
+    /// A key heading that names its page or unit ("Lösungen zu Seite 10", "Answers Unit 1"): that number,
+    /// or `unknownGroup` when the page part cannot be read ("Answers Seite 10/11"). nil for other lines.
+    private static func keyHeadingGroup(_ text: String) -> Int? {
+        let words = tokens(text)
+        guard let first = words.first, keyWords.contains(first) || fillerWords.contains(first),
+              let i = words.firstIndex(where: { groupWords.contains($0) }),
+              i + 1 < words.count, let n = Int(words[i + 1]) else { return nil }
+        return i + 2 == words.count ? n : unknownGroup
+    }
+
+    private static func isKeyHeading(_ text: String, isTopmost: Bool) -> Bool {
+        var words = tokens(text)
         if words.count >= 2, Int(words[words.count - 1]) != nil, groupWords.contains(words[words.count - 2]) {
             words.removeLast(2)
         }
+        words.removeAll { Int($0) != nil }      // "Answers 1-20"
         guard (1...3).contains(words.count), words.allSatisfy({ keyWords.contains($0) || fillerWords.contains($0) }) else { return false }
         if words.contains(where: { keyWords.contains($0) }) { return true }
         return isTopmost && words == ["answer"]    // a lone "Answer" counts only as the first line of the page
@@ -49,12 +64,7 @@ public enum AnswerPages {
         return hasHeading && parse(lines).count >= 3
     }
 
-    private static let groupStart = #"(?:pages?|pp?\.|seiten?|s\.|unit|lektion|kapitel|lesson)"#
-
-    private enum Parsed {
-        case group(Int)
-        case entry(Int, [String])
-    }
+    private static let groupStart = #"(?:pages?|pp?\.|seiten?|s\.|unit|lektion|kapitel|lesson|chapter|ch\.|module|topic|übung|uebung)"#
 
     /// Lines like "3. 4, 5, 6" or "Task 3: a b c" become entries; a line "Page 10" (or "Seite", "Unit",
     /// "Lektion", "S. 10") starts a group. A heading that cannot be read ("Pages 12-13", "Seite 10/11")
@@ -64,7 +74,7 @@ public enum AnswerPages {
     /// "ice cream, 4").
     ///
     /// Keys are often printed in two or three columns. The numbered lines are split into columns by their
-    /// x position and each column is read top to bottom, left to right; a heading belongs to the column it
+    /// x position and width and each column is read top to bottom, left to right; a heading belongs to the column it
     /// is closest to. A column starts without a group, so entries are never taken over from the column before.
     public static func parse(_ lines: [PageText]) -> [Entry] {
         guard let entryRegex = try? NSRegularExpression(
@@ -72,18 +82,24 @@ public enum AnswerPages {
               let groupRegex = try? NSRegularExpression(
                 pattern: "^\\s*" + groupStart + #"\s*(\d{1,3})\s*[:.]?\s*$"#, options: [.caseInsensitive]),
               let headingLike = try? NSRegularExpression(
-                pattern: "^\\s*" + groupStart + #"\s*\d"#, options: [.caseInsensitive])
+                pattern: "^\\s*" + groupStart + #"\s*\d"#, options: [.caseInsensitive]),
+              // any other short "word number" line ("Teil 3", "Part 2-3"), except task numbers ("Aufgabe 3")
+              let shortHeading = try? NSRegularExpression(
+                pattern: #"^\s*(?!task|aufgabe|nr\b|no\b|answers?|key|solutions?|lösung|loesung|antworten)\p{L}+\.?\s*\d[\d\s\-\u2013/]*$"#, options: [.caseInsensitive])
         else { return [] }
 
-        var entryLines: [(x: Double, y: Double, task: Int, answers: [String])] = []
+        var entryLines: [(x: Double, width: Double, y: Double, task: Int, answers: [String])] = []
         var headings: [(x: Double, y: Double, group: Int)] = []
         for line in lines {
-            let text = line.text
+            let text = line.text.precomposedStringWithCanonicalMapping
             let range = NSRange(text.startIndex..., in: text)
-            if let g = groupRegex.firstMatch(in: text, options: [], range: range),
+            if let heading = keyHeadingGroup(text) {
+                headings.append((line.box.x, line.box.y, heading))
+            } else if let g = groupRegex.firstMatch(in: text, options: [], range: range),
                let r = Range(g.range(at: 1), in: text), let n = Int(text[r]) {
                 headings.append((line.box.x, line.box.y, n))
-            } else if headingLike.firstMatch(in: text, options: [], range: range) != nil {
+            } else if headingLike.firstMatch(in: text, options: [], range: range) != nil
+                        || shortHeading.firstMatch(in: text, options: [], range: range) != nil {
                 headings.append((line.box.x, line.box.y, unknownGroup))
             } else if let match = entryRegex.firstMatch(in: text, options: [], range: range),
                       let numberRange = Range(match.range(at: 1), in: text),
@@ -94,21 +110,23 @@ public enum AnswerPages {
                 let answers = rest.components(separatedBy: separators)
                     .map { $0.trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: "."))) }
                     .filter { !$0.isEmpty }
-                if !answers.isEmpty { entryLines.append((line.box.x, line.box.y, number, answers)) }
+                if !answers.isEmpty { entryLines.append((line.box.x, line.box.width, line.box.y, number, answers)) }
             }
         }
         guard !entryLines.isEmpty else { return [] }
 
-        // Columns of numbered lines: a gap of more than 0.1 of the page width starts a new column.
+        // Columns of numbered lines: a line starts a new column when it begins to the right of every box
+        // of the current column, so narrow columns that sit close together are still told apart.
         var columns: [[Int]] = []                       // indices into entryLines
-        var lastX = 0.0
+        var rightEdge = 0.0
         for index in entryLines.indices.sorted(by: { entryLines[$0].x < entryLines[$1].x }) {
-            if let last = columns.last, !last.isEmpty, entryLines[index].x - lastX <= 0.1 {
+            if !columns.isEmpty, entryLines[index].x <= rightEdge {
                 columns[columns.count - 1].append(index)
+                rightEdge = max(rightEdge, entryLines[index].x + entryLines[index].width)
             } else {
                 columns.append([index])
+                rightEdge = entryLines[index].x + entryLines[index].width
             }
-            lastX = entryLines[index].x
         }
         func distance(_ x: Double, to column: [Int]) -> Double {
             let xs = column.map { entryLines[$0].x }

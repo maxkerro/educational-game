@@ -192,7 +192,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [x] `push.sh` and `.githooks/pre-push` exist; `push.sh` runs the checks and build first, then `git push` starts the Opus review hook
   - [ ] A full run passes once (Claude login must be renewed first)
 - **Tests:** 
-- **Commits:** 
+- **Commits:** 1a80704, 3bb0abc, c81f0b9
 - **Notes:** Old id I3. Partly done. Review 2: `push.sh` stops when there are uncommitted changes, so the checks always test what is pushed.
 
 ## M2 — Answers without a grown-up, offline
@@ -221,8 +221,8 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] The importer reads all pages of a book first and applies the key before any other method
   - [ ] Source 'answer page' shown to the grown-up (D12)
 - **Tests:** Sources/PagePalsChecks/main.swift (AC1)
-- **Commits:** b7dbbbf, 3bb0abc
-- **Notes:** Old id D3. Partly done. Review 1 (2026-10-27): heading must consist only of key words ('Answer the questions' is a task page); entries keep their page/unit group and a task only gets a key when exactly one entry fits (pass the printed page to apply); fill-in success test added. Multi-word answers need a comma in the key. Review 2 (2026-10-28): keys in two or three columns are read column by column (a heading belongs to the nearest column, and a column starts without a group); headings 'Pages 12-13' or 'Seite 10/11' start an unknown group that is never used; 'S. 10' and 'Lösungen zu Seite 10' are read; 'Lösung', 'Solution' and a lone 'Answer' on the first line count as key headings. Grouped keys need the printed page number, which comes with PP-003 (AC3).
+- **Commits:** b7dbbbf, 3bb0abc, c81f0b9
+- **Notes:** Old id D3. Partly done. Review 1 (2026-10-27): heading must consist only of key words ('Answer the questions' is a task page); entries keep their page/unit group and a task only gets a key when exactly one entry fits (pass the printed page to apply); fill-in success test added. Multi-word answers need a comma in the key. Review 2 (2026-10-28): keys in two or three columns are read column by column (a heading belongs to the nearest column, and a column starts without a group); headings 'Pages 12-13' or 'Seite 10/11' start an unknown group that is never used; 'S. 10' and 'Lösungen zu Seite 10' are read; 'Lösung', 'Solution' and a lone 'Answer' on the first line count as key headings. Grouped keys need the printed page number, which comes with PP-003 (AC3). Review 3: columns are told apart by the width of their boxes (narrow columns 0.09 apart work); a key heading with a page or unit ('Lösungen zu Seite 10', 'Answers Unit 1') groups the entries under it, so a one-page key is not applied to every page; Chapter, Module, Topic, Übung are group words and any other short 'word number' line (not a task number) starts an unknown group; 'Answers 1–20' is a key heading again.
 
 ### PP-034 — Solve crosswords from the printed word list (D4)
 - **Status:** doing
@@ -234,7 +234,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [x] Unique solution found; if not unique, marked for the grown-up
   - [ ] Fed by the recognised crossword grid (B9)
 - **Tests:** Sources/PagePalsChecks/main.swift (AC1, AC2)
-- **Commits:** b7dbbbf, 3bb0abc
+- **Commits:** b7dbbbf, 3bb0abc, c81f0b9
 - **Notes:** Old id D4. Partly done. Review 1: the same word listed twice is not a second solution; sharp s counts as one letter. Review 2: ß and capital ẞ are one letter, and a word with ß also fits a slot as 'SS' (STRASSE); 'Dog' and 'DOG' are the same word.
 
 ### PP-035 — Solve word searches (D5)
@@ -247,7 +247,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [x] Words found once give their position; others are marked for the grown-up
   - [ ] Fed by the recognised letter grid (B9)
 - **Tests:** Sources/PagePalsChecks/main.swift (AC1, AC2)
-- **Commits:** b7dbbbf, 3bb0abc
+- **Commits:** b7dbbbf, 3bb0abc, c81f0b9
 - **Notes:** Old id D5. Partly done. Review 1: palindromes (MUM) count once; all 8 directions, found-twice and sharp s are tested. Review 2: a word with ß is also searched as 'SS' (STRASSE) and a capital ẞ cell matches.
 
 ### PP-036 — Match pictures to words with an on-device model (D6)

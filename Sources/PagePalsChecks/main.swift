@@ -321,6 +321,34 @@ do {
     }
     check(AnswerPages.isKeyPage([line("Lo\u{0308}sungen", 0.3, 0.05)] + body), "answer page: heading with a decomposed umlaut")
     check(!AnswerPages.isKeyPage([line("Answer", 0.3, 0.20)] + [line("Read.", 0.1, 0.02)] + body), "answer page: a lone 'Answer' below other text is not a key heading")
+
+    // Narrow columns that sit close together (boxes do not overlap) are still separate columns
+    func narrow(_ text: String, _ x: Double, _ y: Double) -> PageText { PageText(text: text, box: PageRect(x: x, y: y, width: 0.08, height: 0.03)) }
+    var threeColumns = [narrow("Page 10", 0.05, 0.10), narrow("Page 11", 0.14, 0.30), narrow("Page 12", 0.23, 0.10)]
+    for n in 1...6 { threeColumns.append(narrow("\(n). \(n), \(n + 1), \(n + 2)", 0.05, 0.10 + 0.05 * Double(n))) }
+    threeColumns.append(narrow("1. 7, 8, 9", 0.14, 0.35))
+    threeColumns.append(narrow("1. 3, 2, 1", 0.23, 0.15))
+    let threeEntries = AnswerPages.parse(threeColumns)
+    check(AnswerPages.apply(threeEntries, to: page10Task5, group: 10).key?.order == ["a": 5, "b": 6, "c": 7], "answer page: three narrow columns, task 5 of page 10 keeps its key")
+    check(AnswerPages.apply(threeEntries, to: page10Task5, group: 11).key == nil, "answer page: three narrow columns, page 11 has no task 5 and gets nothing")
+    check(AnswerPages.apply(threeEntries, to: task, group: 12).key?.order == ["a": 3, "b": 2, "c": 1], "answer page: three narrow columns, page 12 task 1")
+
+    // A key heading that names its page or unit groups the entries under it
+    let namedPage = AnswerPages.parse([line("L\u{00F6}sungen zu Seite 10", 0.3, 0.02), line("1. 4, 5, 6", 0.1, 0.15)])
+    check(namedPage.first?.group == 10, "answer page: 'L\u{00F6}sungen zu Seite 10' groups the entries under it")
+    check(AnswerPages.apply(namedPage, to: task, group: 10).key?.order == ["a": 4, "b": 5, "c": 6], "answer page: that key is used for page 10")
+    check(AnswerPages.apply(namedPage, to: task, group: 11).key == nil, "answer page: that key is not used for page 11")
+    check(AnswerPages.parse([line("Answers Unit 1", 0.3, 0.02), line("1. 4, 5, 6", 0.1, 0.15)]).first?.group == 1, "answer page: 'Answers Unit 1' groups the entries under it")
+    check(AnswerPages.parse([line("L\u{00F6}sungen Seite 10/11", 0.3, 0.02), line("1. 4, 5, 6", 0.1, 0.15)]).first?.group == AnswerPages.unknownGroup,
+          "answer page: a key heading with a page range is an unknown group")
+    check(AnswerPages.isKeyPage([line("Answers 1\u{2013}20", 0.3, 0.02)] + body), "answer page: heading 'Answers 1-20'")
+
+    // More group words; any other short "word number" line must not extend the group before it
+    let chapters = AnswerPages.parse([line("Unit 1", 0.1, 0.10), line("1. 4, 5, 6", 0.1, 0.15), line("Chapter 2", 0.1, 0.20), line("1. 7, 8, 9", 0.1, 0.25),
+                                      line("Teil 3", 0.1, 0.30), line("1. 1, 1, 1", 0.1, 0.35)])
+    check(AnswerPages.apply(chapters, to: task, group: 1).key?.order == ["a": 4, "b": 5, "c": 6], "answer page: unit 1 keeps its key")
+    check(AnswerPages.apply(chapters, to: task, group: 2).key?.order == ["a": 7, "b": 8, "c": 9], "answer page: 'Chapter 2' is a group")
+    check(AnswerPages.apply(chapters, to: task, group: AnswerPages.unknownGroup).key == nil, "answer page: an unknown heading ('Teil 3') is never used")
 }
 
 // D4: crosswords
