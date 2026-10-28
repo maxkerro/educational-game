@@ -77,6 +77,7 @@ public enum KeySource: String, Codable, Sendable {
     case calculated   // worked out from the page text, e.g. "three + one ="
     case parent       // typed in by a grown-up
     case answerPage   // read from the answer key printed in the book
+    case model        // found by an on-device model
 }
 
 public struct PlayTask: Codable, Equatable, Identifiable, Sendable {

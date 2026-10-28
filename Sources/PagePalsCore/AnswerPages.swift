@@ -167,6 +167,7 @@ public enum AnswerPages {
         guard task.key == nil, let number = taskNumber(of: task.prompt), !task.items.isEmpty else { return task }
         let grouped = entries.contains { $0.group != nil }
         if grouped && (group == nil || group == unknownGroup) { return task }   // do not guess the page
+        if group != nil && !grouped { return task }          // a key without page headings cannot be placed on a page
         let candidates = entries.filter { $0.task == number && (!grouped || $0.group == group) }
         guard candidates.count == 1, let entry = candidates.first,
               entry.answers.count == task.items.count else { return task }

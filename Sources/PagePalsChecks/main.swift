@@ -400,5 +400,131 @@ do {
     check(WordSearch.find("Stra\u{00DF}e", in: capitalSharp).count == 1, "word search: capital sharp s")
 }
 
+// PP-033: answer key of the whole book, matched by printed page number
+func textLine(_ text: String, _ x: Double, _ y: Double, width: Double = 0.2, height: Double = 0.03) -> PageText {
+    PageText(text: text, box: PageRect(x: x, y: y, width: width, height: height))
+}
+do {
+    let footer10 = [textLine("10", 0.45, 0.95, width: 0.05)]
+    check(PageNumbers.number(atX: 0.5, lines: footer10, pageAspect: 0.7) == 10, "page number: read from the footer")
+    check(PageNumbers.number(atX: 0.5, lines: [], pageAspect: 0.7) == nil, "page number: none printed")
+    check(PageNumbers.number(atX: 0.5, lines: [textLine("10", 0.45, 0.95, width: 0.05), textLine("11", 0.1, 0.02, width: 0.05)], pageAspect: 0.7) == nil, "page number: two different numbers on one page are not guessed")
+    check(PageNumbers.number(atX: 0.5, lines: [textLine("Page 3", 0.45, 0.95, width: 0.1)], pageAspect: 0.7) == nil, "page number: text is not a number")
+    let spread = [textLine("10", 0.2, 0.95, width: 0.05), textLine("11", 0.7, 0.95, width: 0.05)]
+    check(PageNumbers.number(atX: 0.25, lines: spread, pageAspect: 1.4) == 10 && PageNumbers.number(atX: 0.75, lines: spread, pageAspect: 1.4) == 11, "page number: left and right page of a spread")
+
+    let items = [TaskItem(id: "a", region: PageRect(x: 0.1, y: 0.2, width: 0.05, height: 0.03)),
+                 TaskItem(id: "b", region: PageRect(x: 0.1, y: 0.3, width: 0.05, height: 0.03)),
+                 TaskItem(id: "c", region: PageRect(x: 0.1, y: 0.4, width: 0.05, height: 0.03))]
+    let numberTask = PlayTask(id: "p1-t1", kind: .numberInOrder, prompt: "1. Number.", region: PageRect(x: 0, y: 0.1, width: 1, height: 0.6), items: items)
+    let keyPage = [textLine("Answers", 0.4, 0.05), textLine("Page 10", 0.1, 0.10), textLine("1. 4, 5, 6", 0.1, 0.15),
+                   textLine("2. 1, 2, 3", 0.1, 0.20), textLine("Page 11", 0.1, 0.30), textLine("1. 7, 8, 9", 0.1, 0.35)]
+    let bookEntries = BookKeys.entries(pages: [[textLine("1. Number.", 0.05, 0.1)], keyPage])
+    check(bookEntries.count == 3, "book key: only key pages are read")
+    let onPage10 = BookKeys.apply(bookEntries, to: [numberTask], lines: footer10, pageAspect: 0.7)
+    check(onPage10.first?.key?.order == ["a": 4, "b": 5, "c": 6] && onPage10.first?.keySource == .answerPage, "book key: task 1 on printed page 10")
+    let onPage11 = BookKeys.apply(bookEntries, to: [numberTask], lines: [textLine("11", 0.45, 0.95, width: 0.05)], pageAspect: 0.7)
+    check(onPage11.first?.key?.order == ["a": 7, "b": 8, "c": 9], "book key: task 1 on printed page 11")
+    check(BookKeys.apply(bookEntries, to: [numberTask], lines: [], pageAspect: 0.7).first?.key == nil, "book key: no page number, no key")
+    check(BookKeys.apply(bookEntries, to: [numberTask], lines: [textLine("12", 0.45, 0.95, width: 0.05)], pageAspect: 0.7).first?.key == nil, "book key: page without entries gets no key")
+    let flat = AnswerPages.parse([textLine("1. 4, 5, 6", 0.1, 0.15)])
+    check(AnswerPages.apply(flat, to: numberTask, group: 10).key == nil, "answer page: a key without page headings is not placed on a page")
+
+    // reconciling two methods
+    let fillItems = [TaskItem(id: "x", region: PageRect(x: 0.1, y: 0.2, width: 0.05, height: 0.03))]
+    var calculated = PlayTask(id: "p1-t1", kind: .fillIn, prompt: "1. Write.", region: PageRect(x: 0, y: 0.1, width: 1, height: 0.6), items: fillItems)
+    calculated.key = AnswerKey(text: ["x": "4"])
+    calculated.keySource = .calculated
+    calculated.confidence = 0.8
+    let wordKey = AnswerPages.parse([textLine("Page 10", 0.1, 0.10), textLine("1. four", 0.1, 0.15)])
+    let agreed = BookKeys.apply(wordKey, to: [calculated], lines: footer10, pageAspect: 0.7)
+    check(agreed.first?.key?.text == ["x": "4"] && (agreed.first?.confidence ?? 0) >= AnswerReconciler.agreed, "reconcile: '4' and 'four' agree, the answer is trusted")
+    calculated.key = AnswerKey(text: ["x": "5"])
+    let disputed = BookKeys.apply(wordKey, to: [calculated], lines: footer10, pageAspect: 0.7)
+    check(disputed.first?.key == nil && (disputed.first?.confidence ?? 1) <= AnswerReconciler.disputed, "reconcile: different answers are left to a grown-up")
+    check(AnswerReconciler.merge(PlayTask(id: "t", kind: .fillIn, prompt: "p"), calculated).key?.text == ["x": "5"], "reconcile: one method only keeps its key")
+}
+
+// D2: units and money
+do {
+    check(QuantitySolver.solve("3 m + 20 cm =") == "320 cm", "units: metres and centimetres")
+    check(QuantitySolver.solve("30 cm + 20 cm =") == "50 cm", "units: same unit")
+    check(QuantitySolver.solve("1 kg - 250 g =") == "750 g", "units: kilograms and grams")
+    check(QuantitySolver.solve("2 l - 500 ml = _") == "1500 ml", "units: litres, blank after the equals sign")
+    check(QuantitySolver.solve("1 h 30 min + 45 min =") == "2 h 15 min", "time: hours and minutes")
+    check(QuantitySolver.solve("2,50 \u{20AC} + 1,20 \u{20AC} =") == "3,70 \u{20AC}", "money: decimal comma, sign after the number")
+    check(QuantitySolver.solve("\u{20AC} 3.50 + \u{20AC} 1.25 =") == "\u{20AC} 4.75", "money: decimal point, sign before the number")
+    check(QuantitySolver.solve("3 \u{20AC} + 2 \u{20AC} =") == "5 \u{20AC}", "money: whole euros")
+    check(QuantitySolver.solve("3 m _ 250 cm") == ">", "units: comparing")
+    check(QuantitySolver.solve("5 cm - 8 cm =") == nil, "units: a negative result is rejected")
+    check(QuantitySolver.solve("3 apples + 2 =") == nil, "units: an unknown word is not a unit")
+    check(QuantitySolver.solve("3 m + 2 kg =") == nil, "units: length and mass do not mix")
+    check(NumberWords.answer(forSum: "4 m + 1 m =") == "5 m", "units: used for task lines")
+
+    // sums in a column
+    let stacks = [textLine("23", 0.10, 0.30, width: 0.06), textLine("+ 45", 0.08, 0.335, width: 0.08),
+                  textLine("12", 0.50, 0.30, width: 0.06), textLine("+ 30", 0.48, 0.335, width: 0.08)]
+    let found = ColumnSums.find(stacks)
+    check(found.count == 2 && Set(found.map { $0.expression }) == ["23 + 45 =", "12 + 30 ="], "column sums: two stacks found")
+    check(MathSolver.solve("23 + 45 =") == "68", "column sums: the expression is solved")
+    let bars = [PageRect(x: 0.1, y: 0.38, width: 0.08, height: 0.03), PageRect(x: 0.5, y: 0.38, width: 0.08, height: 0.03)]
+    let columnTasks = TaskBuilder.buildTasks(lines: [textLine("5. Add.", 0.05, 0.1)] + stacks, emptyCircles: [], blanks: bars, idPrefix: "p1")
+    check(columnTasks.first?.kind == .fillIn && Set(columnTasks.first?.key?.text.values.map { $0 } ?? []) == ["68", "42"], "column sums: a task with the answers calculated")
+    check(ColumnSums.find([textLine("23", 0.10, 0.30, width: 0.06), textLine("45", 0.08, 0.335, width: 0.08)]).isEmpty, "column sums: no sign, no sum")
+}
+
+// D6 / D7 / D9: logic around the on-device models
+do {
+    let diagonal: [[Double]] = [[0.30, 0.10, 0.12], [0.11, 0.28, 0.10], [0.09, 0.12, 0.31]]
+    let matched = PictureMatching.assign(scores: diagonal)
+    check(matched?.wordForPicture == [0, 1, 2] && (matched?.confidence ?? 0) > 0.5, "pictures: clear scores give the pairing")
+    let swapped: [[Double]] = [[0.10, 0.30, 0.12], [0.28, 0.11, 0.10], [0.09, 0.12, 0.31]]
+    check(PictureMatching.assign(scores: swapped)?.wordForPicture == [1, 0, 2], "pictures: a different pairing is found")
+    let unsure: [[Double]] = [[0.20, 0.20, 0.10], [0.20, 0.20, 0.10], [0.10, 0.10, 0.30]]
+    check(PictureMatching.assign(scores: unsure) == nil, "pictures: two equally good pairings are left to a grown-up")
+    check(PictureMatching.assign(scores: [[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]]) == nil, "pictures: not square")
+    var big = [[Double]](repeating: [Double](repeating: 0.1, count: 9), count: 9)
+    for i in 0..<9 { big[i][(i + 3) % 9] = 0.4 }
+    check(PictureMatching.assign(scores: big)?.wordForPicture == (0..<9).map { ($0 + 3) % 9 }, "pictures: nine pictures (greedy)")
+    let circles = [TaskItem(id: "c1"), TaskItem(id: "c2"), TaskItem(id: "c3")]
+    check(PictureMatching.numberKey(circles: circles, assignment: matched!)?.order == ["c1": 1, "c2": 2, "c3": 3], "pictures: numbers from the word positions")
+
+    check(CountStatement.stated("There are two ladybirds.") == 2, "count: 'two'")
+    check(CountStatement.stated("There is one") == 1 && CountStatement.stated("There is a ladybird") == 1, "count: 'one' and 'a'")
+    check(CountStatement.stated("Es gibt drei Marienk\u{00E4}fer") == 3, "count: German")
+    check(CountStatement.stated("The ladybirds are red") == nil, "count: no number stated")
+    check(CountStatement.isCorrect("There are two ladybirds", counted: 2) == true && CountStatement.isCorrect("There is one", counted: 2) == false
+          && CountStatement.isCorrect("There is one", counted: nil) == nil, "count: judged against the counted number")
+    let rows = [TaskItem(id: "r1", label: "There are two ladybirds"), TaskItem(id: "r2", label: "There is one ladybird")]
+    check(CountStatement.tickKey(rows: rows, counts: [2, 2])?.booleans == ["r1": true, "r2": false], "count: tick key from counts")
+    check(CountStatement.tickKey(rows: rows, counts: [2, nil]) == nil, "count: an unsure row leaves the whole task to a grown-up")
+
+    let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("pagepals-models-\(UUID().uuidString)")
+    try? FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+    FileManager.default.createFile(atPath: tmp.appendingPathComponent("clip.bin").path, contents: Data([1]))
+    check(OfflineModels.locate("clip.bin", in: tmp) != nil && OfflineModels.locate("missing.bin", in: tmp) == nil, "models: found only when put in place")
+    try? FileManager.default.removeItem(at: tmp)
+}
+
+// H1: no network code in the app (the app must work offline and keep everything on the Mac)
+do {
+    let forbidden = ["URLSession", "URLRequest", "NWConnection", "import Network", "CFSocket", "WKWebView"]
+    var offenders: [String] = []
+    var scanned = 0
+    for folder in ["Sources/PagePalsCore", "Sources/PagePalsImport", "Sources/PagePalsApp"] {
+        guard let names = try? FileManager.default.contentsOfDirectory(atPath: folder) else { continue }
+        for name in names where name.hasSuffix(".swift") {
+            guard let text = try? String(contentsOfFile: folder + "/" + name, encoding: .utf8) else { continue }
+            scanned += 1
+            for word in forbidden where text.contains(word) { offenders.append(name + ": " + word) }
+        }
+    }
+    if scanned == 0 {
+        print("SKIP  offline: run the checks from the package folder to scan the sources")
+    } else {
+        check(offenders.isEmpty, "offline: no network code in the sources \(offenders)")
+    }
+}
+
 print(failures == 0 ? "\nAll checks passed." : "\n\(failures) check(s) failed.")
 exit(failures == 0 ? 0 : 1)

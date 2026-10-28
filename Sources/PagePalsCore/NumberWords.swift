@@ -64,8 +64,8 @@ public enum NumberWords {
         return (0..<table.count).contains(n) ? table[n] : String(n)
     }
 
-    /// Solves a task line such as "three + one =" (see `MathSolver`).
+    /// Solves a task line such as "three + one =" (see `MathSolver`) or "3 m + 20 cm =" (see `QuantitySolver`).
     public static func answer(forSum text: String) -> String? {
-        MathSolver.solve(text)
+        MathSolver.solve(text) ?? QuantitySolver.solve(text)
     }
 }

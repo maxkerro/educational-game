@@ -1,0 +1,20 @@
+name: checks
+
+# Builds the app and runs the logic checks on every push and pull request.
+# Uses only the Swift toolchain that comes with the runner (no Xcode project, no extra packages).
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: swift build
+      - name: Run checks
+        run: swift run PagePalsChecks

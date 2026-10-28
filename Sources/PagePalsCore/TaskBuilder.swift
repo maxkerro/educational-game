@@ -143,6 +143,18 @@ public enum TaskBuilder {
             }
             if let bar = candidates.min(by: { $0.x < $1.x }) { pairs.append((line, bar, answer)) }
         }
+        // sums written in a column ("23" over "+ 45") have their answer bar below the stack
+        for sum in ColumnSums.find(lines) where contains(zone.box, centreOf: sum.box) {
+            guard let answer = NumberWords.answer(forSum: sum.expression) else { continue }
+            let bottom = sum.box.y + sum.box.height
+            let below = blanks.filter { bar in
+                let centre = bar.x + bar.width / 2
+                return bar.y >= bottom - 0.005 && bar.y - bottom < 0.08
+                    && centre >= sum.box.x - 0.03 && centre <= sum.box.x + sum.box.width + 0.03
+                    && contains(zone.box, centreOf: bar)
+            }
+            if let bar = below.min(by: { $0.y < $1.y }) { pairs.append((PageText(text: sum.expression, box: sum.box), bar, answer)) }
+        }
         guard pairs.count >= 2 else { return nil }
         pairs.sort { ($0.bar.y, $0.bar.x) < ($1.bar.y, $1.bar.x) }
 

@@ -24,6 +24,13 @@ final class ImportModel: ObservableObject {
     @Published private(set) var pageBitmap: CGImage?
     @Published private(set) var status = "Open a PDF workbook to begin."
     @Published private(set) var isWorking = false
+    /// "Looking for answer pages ..." while the book is read in the background, then a short result.
+    @Published private(set) var keyStatus = ""
+
+    /// Text of every page that has been read (page index -> lines). Filled by the background scan and by `show`.
+    private var pageText: [Int: [RecognizedLine]] = [:]
+    private var bookKey: [AnswerPages.Entry] = []
+    private var scanTask: Task<Void, Never>?
 
     private var book: PDFBook?
     private var bookName = "book"
@@ -40,6 +47,10 @@ final class ImportModel: ObservableObject {
             book = opened
             bookName = url.lastPathComponent
             keys = KeyStore.load(book: bookName)
+            scanTask?.cancel()
+            pageText = [:]
+            bookKey = []
+            keyStatus = ""
             pageCount = opened.pageCount
             pageIndex = 0
             image = nil
@@ -52,6 +63,7 @@ final class ImportModel: ObservableObject {
             pageBitmap = nil
             status = "\(url.lastPathComponent): \(opened.pageCount) pages"
             show(page: 0)
+            scanForAnswerPages(opened)
         } catch {
             status = "Could not open that file as a PDF."
         }
@@ -64,12 +76,14 @@ final class ImportModel: ObservableObject {
         guard let book, index >= 0, index < book.pageCount, !isWorking else { return }
         isWorking = true
         status = "Reading page \(index + 1) ..."
+        let cachedLines = pageText[index]
+        let entries = bookKey
 
         Task {
             let outcome = await Task.detached(priority: .userInitiated) { () -> Result<(CGImage, [RecognizedLine], [PageRegion], [PageRect], [PageRect], [PageRect]), Error> in
                 Result {
                     let rendered = try book.renderPage(index)
-                    let found = try PageOCR.recognize(rendered)
+                    let found = try cachedLines ?? PageOCR.recognize(rendered)
                     // Ignore text when looking for pictures. Skip very unsure lines.
                     let words = found.filter { $0.confidence >= 0.5 }.flatMap { $0.words }
                     let regions = PictureFinder.find(in: rendered, textWords: words)
@@ -90,15 +104,19 @@ final class ImportModel: ObservableObject {
                 pageBitmap = rendered
                 circles = foundCircles
                 blanks = foundBars
-                tasks = TaskBuilder
-                    .buildTasks(
-                        lines: found.map { PageText(text: $0.text, box: $0.box) },
-                        emptyCircles: foundCircles,
-                        blanks: foundBars,
-                        tickCircles: foundTicks,
-                        idPrefix: "p\(index + 1)",
-                        pageAspect: Double(rendered.width) / Double(rendered.height)
-                    )
+                pageText[index] = found
+                let texts = found.map { PageText(text: $0.text, box: $0.box) }
+                let aspect = Double(rendered.width) / Double(rendered.height)
+                let built = TaskBuilder.buildTasks(
+                    lines: texts,
+                    emptyCircles: foundCircles,
+                    blanks: foundBars,
+                    tickCircles: foundTicks,
+                    idPrefix: "p\(index + 1)",
+                    pageAspect: aspect
+                )
+                // the key printed at the back of the book (needs the printed page number), then what a grown-up typed
+                tasks = BookKeys.apply(entries, to: built, lines: texts, pageAspect: aspect)
                     .map { task in
                         var task = task
                         if let saved = keys[task.id] {
@@ -123,6 +141,36 @@ final class ImportModel: ObservableObject {
         if let i = tasks.firstIndex(where: { $0.id == taskID }) {
             tasks[i].key = key
             tasks[i].keySource = .parent
+        }
+    }
+
+    /// Reads the text of every page in the background, finds the answer key pages and remembers their entries.
+    /// Pages already read are not read again. The current page is updated when the key is found.
+    private func scanForAnswerPages(_ opened: PDFBook) {
+        let total = opened.pageCount
+        scanTask = Task { [weak self] in
+            var pages: [[PageText]] = []
+            for index in 0..<total {
+                if Task.isCancelled { return }
+                guard let self else { return }
+                self.keyStatus = "Looking for answer pages: \(index + 1) of \(total) ..."
+                var lines = self.pageText[index]
+                if lines == nil {
+                    lines = await Task.detached(priority: .utility) { () -> [RecognizedLine]? in
+                        guard let image = try? opened.renderPage(index) else { return nil }
+                        return try? PageOCR.recognize(image)
+                    }.value
+                    if let read = lines { self.pageText[index] = read }
+                }
+                pages.append((lines ?? []).map { PageText(text: $0.text, box: $0.box) })
+            }
+            guard !Task.isCancelled, let self else { return }
+            let entries = BookKeys.entries(pages: pages)
+            self.bookKey = entries
+            self.keyStatus = entries.isEmpty
+                ? "No answer pages found in this book."
+                : "Answer pages found: \(entries.count) answer lines. They are used on the next page you open."
+            if !entries.isEmpty, !self.isWorking, self.book != nil { self.show(page: self.pageIndex) }
         }
     }
 

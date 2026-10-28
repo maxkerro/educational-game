@@ -11,6 +11,8 @@ public enum PDFBookError: Error {
 /// A PDF workbook opened for import. Renders pages to bitmaps for OCR and display.
 public final class PDFBook {
     private let document: PDFDocument
+    /// PDFKit is not safe to draw from two threads at once; the page scan and the page view both render.
+    private let renderLock = NSLock()
 
     public var pageCount: Int { document.pageCount }
 
@@ -21,6 +23,8 @@ public final class PDFBook {
 
     /// Renders one page (0-based) to a bitmap at the given resolution.
     public func renderPage(_ index: Int, dpi: CGFloat = 200) throws -> CGImage {
+        renderLock.lock()
+        defer { renderLock.unlock() }
         guard let page = document.page(at: index) else { throw PDFBookError.pageOutOfRange }
 
         let bounds = page.bounds(for: .mediaBox)
