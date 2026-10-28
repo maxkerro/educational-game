@@ -1,13 +1,13 @@
 # PagePals Backlog
 
 Project: PagePals (`PP`) · Repo: https://github.com/maxkerro/educational-game · Board: https://claude.ai/artifact/8BrEbdQn5Re1a3Lh7shBFb
-Updated: 2026-10-27
+Updated: 2026-10-28
 
 Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-073); the old number is kept in each title, e.g. `(D2)`. Status `doing` on a story means partly done; unchecked criteria are still open.
 
 ## Milestones
 
-| ID | Name | Platform | Goal |
+| ID | Name | Group | Goal |
 |----|------|----------|------|
 | M1 | Play a real page | Core app | A real book page becomes playable pages (numbers, sums, ticks); the grown-up types answers where needed. |
 | M2 | Answers without a grown-up, offline | Core app | Sums, answer pages, crosswords and word searches are solved by rules; pictures are matched to words by an on-device model. |
@@ -154,7 +154,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
 - **Story:** As a maintainer, I want checks to run before every push so that a bad change cannot reach GitHub.
 - **Description:** Safe for children, works without the internet. Old E0-4, E7-6.
 - **Acceptance criteria:**
-  - [x] `swift run PagePalsChecks` has about 100 checks and runs first in `push.sh`, before `git push` and the review hook
+  - [x] `swift run PagePalsChecks` has over 110 checks and runs first in `push.sh`, before `git push` and the review hook
   - [ ] Recognition quality checks on the test pages (B10)
   - [ ] GitHub Actions runs build and checks
 - **Tests:** 
@@ -193,7 +193,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] A full run passes once (Claude login must be renewed first)
 - **Tests:** 
 - **Commits:** 
-- **Notes:** Old id I3. Partly done.
+- **Notes:** Old id I3. Partly done. Review 2: `push.sh` stops when there are uncommitted changes, so the checks always test what is pushed.
 
 ## M2 — Answers without a grown-up, offline
 
@@ -213,7 +213,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
 
 ### PP-033 — Read the answer pages of the book (D3)
 - **Status:** doing
-- **Area:** Answers without a grown-up, offline · **Points:** 5 · **Priority:** Should · **Depends on:** —
+- **Area:** Answers without a grown-up, offline · **Points:** 5 · **Priority:** Should · **Depends on:** PP-003
 - **Story:** As a parent, I want the app to read the answer key printed at the back of a book so that every task with a key needs no typing.
 - **Description:** The app finds correct answers by itself, with rules first, then on-device models. No internet, no cloud API. Old E1-9.
 - **Acceptance criteria:**
@@ -221,8 +221,8 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] The importer reads all pages of a book first and applies the key before any other method
   - [ ] Source 'answer page' shown to the grown-up (D12)
 - **Tests:** Sources/PagePalsChecks/main.swift (AC1)
-- **Commits:** b7dbbbf
-- **Notes:** Old id D3. Partly done. Review 1 (2026-10-27): heading must consist only of key words ('Answer the questions' is a task page); entries keep their page/unit group and a task only gets a key when exactly one entry fits (pass the printed page to apply); fill-in success test added. Multi-word answers need a comma in the key.
+- **Commits:** b7dbbbf, 3bb0abc
+- **Notes:** Old id D3. Partly done. Review 1 (2026-10-27): heading must consist only of key words ('Answer the questions' is a task page); entries keep their page/unit group and a task only gets a key when exactly one entry fits (pass the printed page to apply); fill-in success test added. Multi-word answers need a comma in the key. Review 2 (2026-10-28): keys in two or three columns are read column by column (a heading belongs to the nearest column, and a column starts without a group); headings 'Pages 12-13' or 'Seite 10/11' start an unknown group that is never used; 'S. 10' and 'Lösungen zu Seite 10' are read; 'Lösung', 'Solution' and a lone 'Answer' on the first line count as key headings. Grouped keys need the printed page number, which comes with PP-003 (AC3).
 
 ### PP-034 — Solve crosswords from the printed word list (D4)
 - **Status:** doing
@@ -234,8 +234,8 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [x] Unique solution found; if not unique, marked for the grown-up
   - [ ] Fed by the recognised crossword grid (B9)
 - **Tests:** Sources/PagePalsChecks/main.swift (AC1, AC2)
-- **Commits:** b7dbbbf
-- **Notes:** Old id D4. Partly done. Review 1: the same word listed twice is not a second solution; sharp s counts as one letter.
+- **Commits:** b7dbbbf, 3bb0abc
+- **Notes:** Old id D4. Partly done. Review 1: the same word listed twice is not a second solution; sharp s counts as one letter. Review 2: ß and capital ẞ are one letter, and a word with ß also fits a slot as 'SS' (STRASSE); 'Dog' and 'DOG' are the same word.
 
 ### PP-035 — Solve word searches (D5)
 - **Status:** doing
@@ -247,8 +247,8 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [x] Words found once give their position; others are marked for the grown-up
   - [ ] Fed by the recognised letter grid (B9)
 - **Tests:** Sources/PagePalsChecks/main.swift (AC1, AC2)
-- **Commits:** b7dbbbf
-- **Notes:** Old id D5. Partly done. Review 1: palindromes (MUM) count once; all 8 directions, found-twice and sharp s are tested.
+- **Commits:** b7dbbbf, 3bb0abc
+- **Notes:** Old id D5. Partly done. Review 1: palindromes (MUM) count once; all 8 directions, found-twice and sharp s are tested. Review 2: a word with ß is also searched as 'SS' (STRASSE) and a capital ẞ cell matches.
 
 ### PP-036 — Match pictures to words with an on-device model (D6)
 - **Status:** todo

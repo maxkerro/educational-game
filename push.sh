@@ -33,8 +33,12 @@ LOG=.review/last-push.log
 exec > >(tee "$LOG") 2>&1
 echo "[push] $(date '+%Y-%m-%d %H:%M:%S') branch $(git rev-parse --abbrev-ref HEAD) @ $(git rev-parse --short HEAD)"
 
+# The checks run on the files in the folder, but git pushes commits. With uncommitted changes the checks
+# could pass on something that is not in the commits being pushed, so stop here.
 if [ -n "$(git status --porcelain)" ]; then
-  echo "[push] Note: uncommitted changes are present; they are tested but NOT pushed."
+  echo "[push] Uncommitted changes found. Commit or stash them first (git status), so the checks test what is pushed."
+  git status --short
+  exit 1
 fi
 
 for entry in "${CHECKS[@]}"; do

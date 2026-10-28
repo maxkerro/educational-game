@@ -2,7 +2,7 @@
   python3 backlog_board.py to-json <backlog.md>                 -> prints {"data":..., "state":...}
   python3 backlog_board.py set-status <backlog.md> ID=status ...  -> rewrites the Status lines
 """
-import json, re, sys, datetime
+import json, os, re, sys, datetime
 
 FIELD = re.compile(r'^- \*\*(.+?):\*\*\s*(.*)$')
 
@@ -87,5 +87,13 @@ if __name__ == '__main__':
         pairs = [a.split('=', 1) for a in sys.argv[3:]]
         if not pairs or any(len(p) != 2 or p[1] not in ('todo', 'doing', 'done') for p in pairs):
             print(usage + '  (status: todo, doing or done)', file=sys.stderr); sys.exit(2)
-        new_text = set_status(text, dict(pairs))   # compute first, so a failure never truncates the file
-        open(path, 'w', encoding='utf-8').write(new_text)
+        changes = dict(pairs)
+        known = {m.group(1) for m in re.finditer(r'^### (\S+) — ', text, re.M)}
+        unknown = sorted(set(changes) - known)
+        if unknown:
+            print('unknown story id(s): ' + ', '.join(unknown), file=sys.stderr); sys.exit(1)
+        new_text = set_status(text, changes)   # compute first, then replace the file in one step
+        tmp = path + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as f:
+            f.write(new_text)
+        os.replace(tmp, path)

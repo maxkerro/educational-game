@@ -33,7 +33,7 @@ Order of methods, from simple to heavy; each step works without the internet:
 3. **Optional local language / vision model** for reading, grammar and counting (D7, D8). Candidates, to be measured in spike D9:
    - **Open vision-language model with MLX Swift** (for example SmolVLM2 or Qwen2-VL, see [mlx-swift-examples](https://github.com/ml-explore/mlx-swift-examples)): downloaded once or copied from a file, then fully offline. Fits the test Mac (Apple silicon, 32 GB): a 4-bit model of a few GB runs there. **First candidate.**
    - **Core ML CLIP-style model** such as [MobileCLIP](https://github.com/apple/ml-mobileclip) for picture-word matching only (small, fast). **First candidate for D6.**
-   - **Apple Foundation Models framework:** the on-device model accepts image input in the newest OS generation and needs no server ([WWDC26 session](https://developer-rno.apple.com/videos/play/wwdc2026/241), [overview](https://callstack.com/blog/on-device-ai-after-wwdc-2026-whats-new)). It needs a much newer macOS than the test Mac has (15.8), so it is **not an option today**; revisit after an OS upgrade.
+   - **Apple Foundation Models framework:** the on-device model accepts image input in the newest OS generation and needs no server ([WWDC26 session](https://developer.apple.com/videos/play/wwdc2026/241), [overview](https://callstack.com/blog/on-device-ai-after-wwdc-2026-whats-new)). It needs a much newer macOS than the test Mac has (15.8), so it is **not an option today**; revisit after an OS upgrade.
 
 The app must stay usable when no model is installed (then answers are calculated, read from answer pages, or typed once by a grown-up). The earlier cloud solver was removed because it needed an API key and the internet.
 

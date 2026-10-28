@@ -293,6 +293,34 @@ do {
     let twice = AnswerPages.parse([PageText(text: "1. 1, 2, 3", box: PageRect(x: 0.1, y: 0.15, width: 0.2, height: 0.03)),
                                    PageText(text: "1. 4, 5, 6", box: PageRect(x: 0.1, y: 0.20, width: 0.2, height: 0.03))])
     check(AnswerPages.apply(twice, to: task).key == nil, "answer page: the same task number twice in one group is not guessed")
+
+    // Keys in two columns: each column is read on its own, so page 10's tasks 5 and 6 do not end up under "Page 11"
+    func line(_ text: String, _ x: Double, _ y: Double) -> PageText { PageText(text: text, box: PageRect(x: x, y: y, width: 0.3, height: 0.03)) }
+    var columns = [line("Answers", 0.4, 0.05), line("Page 10", 0.05, 0.10), line("Page 11", 0.55, 0.30)]
+    for n in 1...6 { columns.append(line("\(n). \(n), \(n + 1), \(n + 2)", 0.05, 0.10 + 0.05 * Double(n))) }
+    columns.append(line("1. 7, 8, 9", 0.55, 0.35))
+    let columnEntries = AnswerPages.parse(columns)
+    let page10Task5 = PlayTask(id: "p10-t5", kind: .numberInOrder, prompt: "5. Number.", items: task.items)
+    check(AnswerPages.apply(columnEntries, to: page10Task5, group: 10).key?.order == ["a": 5, "b": 6, "c": 7], "answer page: two columns, task 5 of page 10 keeps its key")
+    check(AnswerPages.apply(columnEntries, to: page10Task5, group: 11).key == nil, "answer page: two columns, page 11 has no task 5 and gets nothing")
+    check(AnswerPages.apply(columnEntries, to: task, group: 11).key?.order == ["a": 7, "b": 8, "c": 9], "answer page: two columns, page 11 task 1")
+
+    // Headings the app cannot read start a group of their own that is never used
+    let unreadable = AnswerPages.parse([line("Page 10", 0.1, 0.10), line("1. 4, 5, 6", 0.1, 0.15),
+                                        line("Pages 12\u{2013}13", 0.1, 0.20), line("1. 7, 8, 9", 0.1, 0.25)])
+    check(AnswerPages.apply(unreadable, to: task, group: 10).key?.order == ["a": 4, "b": 5, "c": 6], "answer page: an unreadable heading does not spoil the page before it")
+    check(AnswerPages.apply(unreadable, to: task, group: 12).key == nil && AnswerPages.apply(unreadable, to: task, group: AnswerPages.unknownGroup).key == nil,
+          "answer page: entries under an unreadable heading are never used")
+    let short = AnswerPages.parse([line("S. 10", 0.1, 0.10), line("1. 4, 5, 6", 0.1, 0.15)])
+    check(short.first?.group == 10, "answer page: 'S. 10' is a page heading")
+
+    // Key headings
+    let body = Array(key.dropFirst())
+    for heading in ["L\u{00F6}sung", "Solution", "Answers Unit 1", "L\u{00F6}sungen zu Seite 10", "L\u{00F6}sungen", "Loesungen", "Answer"] {
+        check(AnswerPages.isKeyPage([line(heading, 0.3, 0.02)] + body), "answer page: heading '\(heading)'")
+    }
+    check(AnswerPages.isKeyPage([line("Lo\u{0308}sungen", 0.3, 0.05)] + body), "answer page: heading with a decomposed umlaut")
+    check(!AnswerPages.isKeyPage([line("Answer", 0.3, 0.20)] + [line("Read.", 0.1, 0.02)] + body), "answer page: a lone 'Answer' below other text is not a key heading")
 }
 
 // D4: crosswords
@@ -306,6 +334,8 @@ do {
     check(CrosswordSolver.solve(lengths: [3], crossings: [], words: ["HORSE"]) == nil, "crossword: no word of that length")
     check(CrosswordSolver.solve(lengths: [3, 3], crossings: [], words: ["DOG", "DOG"]) == ["DOG", "DOG"], "crossword: the same word listed twice is not a second solution")
     check(CrosswordSolver.solve(lengths: [6], crossings: [], words: ["Stra\u{00DF}e"]) == ["Stra\u{00DF}e"], "crossword: sharp s counts as one letter")
+    check(CrosswordSolver.solve(lengths: [3, 3], crossings: [], words: ["Dog", "DOG"]) != nil, "crossword: 'Dog' and 'DOG' are the same word")
+    check(CrosswordSolver.solve(lengths: [7], crossings: [], words: ["Stra\u{00DF}e"]) == ["Stra\u{00DF}e"], "crossword: sharp s printed as SS fills 7 cells")
 }
 
 // D5: word search
@@ -336,6 +366,10 @@ do {
     check(WordSearch.find("MUM", in: mum).count == 1 && WordSearch.solve(words: ["MUM"], grid: mum)["MUM"] != nil, "word search: a palindrome counts once")
     let strasse: [[Character]] = [Array("STRA\u{00DF}E")]
     check(WordSearch.find("Stra\u{00DF}e", in: strasse).count == 1, "word search: sharp s counts as one letter")
+    let strasseCaps: [[Character]] = [Array("XSTRASSEX"), Array("XXXXXXXXX")]
+    check(WordSearch.find("Stra\u{00DF}e", in: strasseCaps).count == 1, "word search: sharp s printed as SS")
+    let capitalSharp: [[Character]] = [Array("STRA\u{1E9E}E")]
+    check(WordSearch.find("Stra\u{00DF}e", in: capitalSharp).count == 1, "word search: capital sharp s")
 }
 
 print(failures == 0 ? "\nAll checks passed." : "\n\(failures) check(s) failed.")

@@ -18,57 +18,120 @@ public enum AnswerPages {
         }
     }
 
-    /// A heading counts as "this is the key" when it names the answers and says nothing else
-    /// ("Answers", "Answer key", "Lösungen"). "Answer the questions" is a task, not a key.
+    /// The group of entries that sit under a heading the app could not read (for example "Pages 12-13").
+    /// No task is ever given a key from such a group.
+    public static let unknownGroup = -1
+
+    /// Words that name the answers. A heading made only of these (plus filler words and an optional
+    /// "page 10" / "Unit 1" at the end) is the title of a key: "Answers", "Answer key", "Lösungen zu Seite 10".
+    /// "Answer the questions" is a task, not a key.
     private static let keyWords: Set<String> = [
-        "answers", "key", "solutions", "loesungen", "l\u{00F6}sungen", "antworten"
+        "answers", "key", "solution", "solutions", "l\u{00F6}sung", "l\u{00F6}sungen", "loesung", "loesungen", "antworten"
     ]
-    private static let fillerWords: Set<String> = ["answer", "l\u{00F6}sung", "loesung"]
+    private static let fillerWords: Set<String> = ["answer", "zu", "to", "for", "of", "der", "des"]
+    private static let groupWords: Set<String> = ["page", "pages", "p", "seite", "seiten", "s", "unit", "lektion", "kapitel", "lesson"]
+
+    private static func isKeyHeading(_ text: String, isTopmost: Bool) -> Bool {
+        var words = text.precomposedStringWithCanonicalMapping.lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+        if words.count >= 2, Int(words[words.count - 1]) != nil, groupWords.contains(words[words.count - 2]) {
+            words.removeLast(2)
+        }
+        guard (1...3).contains(words.count), words.allSatisfy({ keyWords.contains($0) || fillerWords.contains($0) }) else { return false }
+        if words.contains(where: { keyWords.contains($0) }) { return true }
+        return isTopmost && words == ["answer"]    // a lone "Answer" counts only as the first line of the page
+    }
 
     public static func isKeyPage(_ lines: [PageText]) -> Bool {
-        let hasHeading = lines.contains { line in
-            guard line.box.y < 0.25 else { return false }
-            let words = line.text.lowercased()
-                .components(separatedBy: CharacterSet.letters.inverted)
-                .filter { !$0.isEmpty }
-            guard (1...3).contains(words.count), words.allSatisfy({ keyWords.contains($0) || fillerWords.contains($0) }) else { return false }
-            return words.contains { keyWords.contains($0) }
-        }
+        let top = lines.map { $0.box.y }.min() ?? 0
+        let hasHeading = lines.contains { $0.box.y < 0.25 && isKeyHeading($0.text, isTopmost: $0.box.y <= top + 0.001) }
         return hasHeading && parse(lines).count >= 3
     }
 
+    private static let groupStart = #"(?:pages?|pp?\.|seiten?|s\.|unit|lektion|kapitel|lesson)"#
+
+    private enum Parsed {
+        case group(Int)
+        case entry(Int, [String])
+    }
+
     /// Lines like "3. 4, 5, 6" or "Task 3: a b c" become entries; a line "Page 10" (or "Seite", "Unit",
-    /// "Lektion") starts a group. A task number seen twice in the same group is kept twice, so `apply`
-    /// can refuse to guess. Answers are split at commas or semicolons when the line has any, otherwise
-    /// at spaces (so a two-word answer needs a comma in the key: "ice cream, 4").
+    /// "Lektion", "S. 10") starts a group. A heading that cannot be read ("Pages 12-13", "Seite 10/11")
+    /// starts the unknown group, so its entries are never used. A task number seen twice in the same
+    /// group is kept twice, so `apply` can refuse to guess. Answers are split at commas or semicolons
+    /// when the line has any, otherwise at spaces (so a two-word answer needs a comma in the key:
+    /// "ice cream, 4").
+    ///
+    /// Keys are often printed in two or three columns. The numbered lines are split into columns by their
+    /// x position and each column is read top to bottom, left to right; a heading belongs to the column it
+    /// is closest to. A column starts without a group, so entries are never taken over from the column before.
     public static func parse(_ lines: [PageText]) -> [Entry] {
         guard let entryRegex = try? NSRegularExpression(
                 pattern: #"^\s*(?:task\s+|aufgabe\s+)?(\d{1,2})\s*[.):]\s*(.+)$"#, options: [.caseInsensitive]),
               let groupRegex = try? NSRegularExpression(
-                pattern: #"^\s*(?:page|seite|unit|lektion|kapitel)\s+(\d{1,3})\s*[:.]?\s*$"#, options: [.caseInsensitive])
+                pattern: "^\\s*" + groupStart + #"\s*(\d{1,3})\s*[:.]?\s*$"#, options: [.caseInsensitive]),
+              let headingLike = try? NSRegularExpression(
+                pattern: "^\\s*" + groupStart + #"\s*\d"#, options: [.caseInsensitive])
         else { return [] }
-        var entries: [Entry] = []
-        var group: Int?
-        let ordered = lines.sorted { ($0.box.y, $0.box.x) < ($1.box.y, $1.box.x) }
-        for line in ordered {
+
+        var entryLines: [(x: Double, y: Double, task: Int, answers: [String])] = []
+        var headings: [(x: Double, y: Double, group: Int)] = []
+        for line in lines {
             let text = line.text
             let range = NSRange(text.startIndex..., in: text)
             if let g = groupRegex.firstMatch(in: text, options: [], range: range),
                let r = Range(g.range(at: 1), in: text), let n = Int(text[r]) {
-                group = n
-                continue
+                headings.append((line.box.x, line.box.y, n))
+            } else if headingLike.firstMatch(in: text, options: [], range: range) != nil {
+                headings.append((line.box.x, line.box.y, unknownGroup))
+            } else if let match = entryRegex.firstMatch(in: text, options: [], range: range),
+                      let numberRange = Range(match.range(at: 1), in: text),
+                      let restRange = Range(match.range(at: 2), in: text),
+                      let number = Int(text[numberRange]) {
+                let rest = String(text[restRange])
+                let separators: CharacterSet = rest.contains(",") || rest.contains(";") ? CharacterSet(charactersIn: ",;") : .whitespaces
+                let answers = rest.components(separatedBy: separators)
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: "."))) }
+                    .filter { !$0.isEmpty }
+                if !answers.isEmpty { entryLines.append((line.box.x, line.box.y, number, answers)) }
             }
-            guard let match = entryRegex.firstMatch(in: text, options: [], range: range),
-                  let numberRange = Range(match.range(at: 1), in: text),
-                  let restRange = Range(match.range(at: 2), in: text),
-                  let number = Int(text[numberRange]) else { continue }
-            let rest = String(text[restRange])
-            let separators: CharacterSet = rest.contains(",") || rest.contains(";") ? CharacterSet(charactersIn: ",;") : .whitespaces
-            let answers = rest.components(separatedBy: separators)
-                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: "."))) }
-                .filter { !$0.isEmpty }
-            guard !answers.isEmpty else { continue }
-            entries.append(Entry(task: number, answers: answers, group: group))
+        }
+        guard !entryLines.isEmpty else { return [] }
+
+        // Columns of numbered lines: a gap of more than 0.1 of the page width starts a new column.
+        var columns: [[Int]] = []                       // indices into entryLines
+        var lastX = 0.0
+        for index in entryLines.indices.sorted(by: { entryLines[$0].x < entryLines[$1].x }) {
+            if let last = columns.last, !last.isEmpty, entryLines[index].x - lastX <= 0.1 {
+                columns[columns.count - 1].append(index)
+            } else {
+                columns.append([index])
+            }
+            lastX = entryLines[index].x
+        }
+        func distance(_ x: Double, to column: [Int]) -> Double {
+            let xs = column.map { entryLines[$0].x }
+            guard let low = xs.min(), let high = xs.max() else { return .infinity }
+            return x < low ? low - x : (x > high ? x - high : 0)
+        }
+
+        var entries: [Entry] = []
+        for (c, column) in columns.enumerated() {
+            let mine = headings.filter { heading in
+                let nearest = columns.indices.min { distance(heading.x, to: columns[$0]) < distance(heading.x, to: columns[$1]) } ?? 0
+                return nearest == c
+            }
+            enum Row { case heading(Int), entry(Int) }
+            var rows: [(y: Double, row: Row)] = mine.map { ($0.y, Row.heading($0.group)) }
+            rows += column.map { (entryLines[$0].y, Row.entry($0)) }
+            var group: Int?
+            for item in rows.sorted(by: { $0.y < $1.y }) {
+                switch item.row {
+                case .heading(let g): group = g
+                case .entry(let i): entries.append(Entry(task: entryLines[i].task, answers: entryLines[i].answers, group: group))
+                }
+            }
         }
         return entries
     }
@@ -85,7 +148,7 @@ public enum AnswerPages {
     public static func apply(_ entries: [Entry], to task: PlayTask, group: Int? = nil) -> PlayTask {
         guard task.key == nil, let number = taskNumber(of: task.prompt), !task.items.isEmpty else { return task }
         let grouped = entries.contains { $0.group != nil }
-        if grouped && group == nil { return task }          // do not guess the page
+        if grouped && (group == nil || group == unknownGroup) { return task }   // do not guess the page
         let candidates = entries.filter { $0.task == number && (!grouped || $0.group == group) }
         guard candidates.count == 1, let entry = candidates.first,
               entry.answers.count == task.items.count else { return task }
