@@ -19,6 +19,6 @@ let package = Package(
         .target(name: "PagePalsCore"),
         .target(name: "PagePalsImport", dependencies: ["PagePalsCore"]),
         .executableTarget(name: "PagePalsApp", dependencies: ["PagePalsCore", "PagePalsImport"]),
-        .executableTarget(name: "PagePalsChecks", dependencies: ["PagePalsCore"])
+        .executableTarget(name: "PagePalsChecks", dependencies: ["PagePalsCore", "PagePalsImport"])
     ]
 )

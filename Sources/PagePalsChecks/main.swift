@@ -1,5 +1,6 @@
 import Foundation
 import PagePalsCore
+import PagePalsImport
 
 // A tiny test runner that needs no XCTest. Run with: swift run PagePalsChecks
 
@@ -916,6 +917,49 @@ do {
     let sKey = AnswerPages.parse([textLine("S 10", 0.1, 0.10), textLine("1. 4, 5, 6", 0.1, 0.15)])
     check(sKey.first?.group == 10 && sKey.first?.groupIsPage == true, "PP-033: 'S 10' without a dot is a page group")
     check(AnswerPages.parse([textLine("Set 10", 0.1, 0.10), textLine("1. 4", 0.1, 0.15)]).first?.groupIsPage != true || AnswerPages.parse([textLine("Set 10", 0.1, 0.10), textLine("1. 4", 0.1, 0.15)]).first?.group == AnswerPages.unknownGroup, "PP-033: 'Set 10' is not a page")
+}
+
+// PP-016 / PP-062 / PP-007: test pages with known shapes
+do {
+    let m = RecognitionScore.match(expected: [PageRect(x: 0.1, y: 0.1, width: 0.02, height: 0.02), PageRect(x: 0.5, y: 0.5, width: 0.02, height: 0.02)],
+                                   found: [PageRect(x: 0.105, y: 0.1, width: 0.02, height: 0.02), PageRect(x: 0.8, y: 0.8, width: 0.02, height: 0.02)])
+    check(m.hits == 1 && m.extras == 1 && m.missed == 1 && closeTo(m.recall, 0.5) && closeTo(m.precision, 0.5), "score: hits, extras and misses")
+    check(RecognitionScore.match(expected: [], found: []).recall == 1, "score: nothing to find is a full score")
+    let twin = RecognitionScore.match(expected: [PageRect(x: 0.1, y: 0.1, width: 0.02, height: 0.02), PageRect(x: 0.11, y: 0.1, width: 0.02, height: 0.02)],
+                                      found: [PageRect(x: 0.1, y: 0.1, width: 0.02, height: 0.02)])
+    check(twin.hits == 1 && twin.missed == 1, "score: a found box is used once")
+
+    check(TestPages.count >= 10, "test pages: at least 10 pages")
+    let kinds = TestPages.specs.flatMap { $0 }.map { $0.kind }
+    check(TestPages.kinds.allSatisfy { kind in kinds.filter { $0 == kind }.count >= 2 }, "test pages: every task type at least twice")
+
+    let none = RecognitionScore.Result(expected: 0, hits: 0, extras: 0)
+    var circles = none
+    var bars = none
+    var ticks = none
+    var headersExpected = 0, headersFound = 0
+    for i in 0..<TestPages.count {
+        let page = TestPages.page(i)
+        let again = TestPages.page(i)
+        if i == 0 { check(page.circles == again.circles && page.bars == again.bars && page.headerNumbers == again.headerNumbers, "test pages: the same page every time") }
+        do {
+            let score = try TestPages.score(page)
+            print("INFO  " + score.line)
+            circles = circles + score.circles
+            bars = bars + score.bars
+            ticks = ticks + score.ticks
+            headersExpected += score.headersExpected
+            headersFound += score.headersFound
+        } catch {
+            check(false, "test pages: \(page.name) could not be read (\(error))")
+        }
+    }
+    let headerShare = headersExpected == 0 ? 0 : Double(headersFound) / Double(headersExpected)
+    print("INFO  test pages: headers \(headersFound)/\(headersExpected), circles \(circles.hits)/\(circles.expected) (+\(circles.extras)), bars \(bars.hits)/\(bars.expected) (+\(bars.extras)), ticks \(ticks.hits)/\(ticks.expected) (+\(ticks.extras))")
+    check(headerShare >= 0.9, "PP-007: at least 90% of the task headers are found on the test pages (\(headersFound)/\(headersExpected))")
+    check(circles.recall >= 0.8 && circles.precision >= 0.8, "PP-009: empty circles on the test pages (\(circles.hits)/\(circles.expected), \(circles.extras) extra)")
+    check(bars.recall >= 0.8 && bars.precision >= 0.8, "PP-010: answer bars on the test pages (\(bars.hits)/\(bars.expected), \(bars.extras) extra)")
+    check(ticks.recall >= 0.8 && ticks.precision >= 0.8, "PP-011: tick circles on the test pages (\(ticks.hits)/\(ticks.expected), \(ticks.extras) extra)")
 }
 
 print(failures == 0 ? "\nAll checks passed." : "\n\(failures) check(s) failed.")
