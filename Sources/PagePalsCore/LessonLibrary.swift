@@ -23,7 +23,7 @@ public struct LessonLibrary: Sendable {
     static let packFile = "pack.json"
 
     /// Book ids and picture names are plain file names, never paths.
-    static func isSafe(_ name: String) -> Bool {
+    public static func isSafe(_ name: String) -> Bool {
         guard !name.isEmpty, !name.hasPrefix("."), name.count <= 120 else { return false }
         return name.unicodeScalars.allSatisfy { CharacterSet.alphanumerics.contains($0) || "-_.".unicodeScalars.contains($0) }
     }

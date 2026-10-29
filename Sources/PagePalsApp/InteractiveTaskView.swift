@@ -12,6 +12,8 @@ struct InteractiveTaskView: View {
     let task: PlayTask
     let page: CGImage
     let language: BookLanguage
+    /// Which book the task is in: task ids repeat from book to book, so stars are kept per book.
+    let scope: String
     let onSaveKey: (AnswerKey) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -34,10 +36,11 @@ struct InteractiveTaskView: View {
         var point: CGPoint
     }
 
-    init(task: PlayTask, page: CGImage, language: BookLanguage, onSaveKey: @escaping (AnswerKey) -> Void) {
+    init(task: PlayTask, page: CGImage, language: BookLanguage, scope: String, onSaveKey: @escaping (AnswerKey) -> Void) {
         self.task = task
         self.page = page
         self.language = language
+        self.scope = scope
         self.onSaveKey = onSaveKey
         _key = State(initialValue: task.key)
         // the printed order is the scrambled one; if a key exists and the print is already in order, start shuffled
@@ -295,7 +298,7 @@ struct InteractiveTaskView: View {
     private func awardIfDone() {
         guard !starsGiven, !authoring, let e = evaluation, e.isComplete else { return }
         starsGiven = true
-        StarStore.award(StarLedger.stars(complete: true, wrongTries: wrongTries), task: task.id)
+        StarStore.award(StarLedger.stars(complete: true, wrongTries: wrongTries), task: scope + "/" + task.id)
     }
 
     @ViewBuilder
@@ -379,7 +382,7 @@ struct InteractiveTaskView: View {
             Button("Confirm") {
                 if gate.accepts(gateAnswer) {
                     starsGiven = true
-                    StarStore.award(3, task: task.id)
+                    StarStore.award(3, task: scope + "/" + task.id)
                 } else {
                     gateAnswer = ""
                 }

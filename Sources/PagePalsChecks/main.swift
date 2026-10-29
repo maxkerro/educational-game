@@ -2,7 +2,8 @@ import Foundation
 import PagePalsCore
 import PagePalsImport
 
-// A tiny test runner that needs no XCTest. Run with: swift run PagePalsChecks
+// A tiny test runner that needs no XCTest. Run with: swift run -c release PagePalsChecks
+// (a debug build skips scoring the test pages: it needs over a minute per page)
 
 // lines appear at once even when the output goes through a pipe (push.sh), so a slow check can be seen
 setvbuf(stdout, nil, _IOLBF, 0)
@@ -1024,6 +1025,26 @@ do {
     let back = data.flatMap { StoredPageText.decode($0) }
     check(back?.texts == texts && back?.aspect == 0.7, "PP-005: page text survives the round trip to disk")
     check(StoredPageText.decode(Data("nonsense".utf8)) == nil, "PP-005: damaged page text is ignored")
+}
+
+// Review 7: book ids, numbering before ordering, ordering on the test pages
+do {
+    let a = BookID.make(fileName: "Activity Book.pdf", fingerprint: 1)
+    let b = BookID.make(fileName: "Activity Book.pdf", fingerprint: 2)
+    check(a != b, "PP-004: two different files with the same name get different library folders")
+    check(a == BookID.make(fileName: "Activity Book.pdf", fingerprint: 1), "PP-004: the same file gets the same folder again")
+    check(BookID.make(fileName: "Book 1.pdf", fingerprint: 5) != BookID.make(fileName: "Book-1.pdf", fingerprint: 6), "PP-004: names that clean to the same text stay apart")
+    check(LessonLibrary.isSafe(BookID.make(fileName: "\u{00dc}bungen/../x y.pdf", fingerprint: UInt64.max)), "PP-004: the id is a safe folder name")
+    check(BookID.fingerprint([Data("ab".utf8), Data("c".utf8)]) != BookID.fingerprint([Data("a".utf8), Data("bc".utf8)]), "PP-004: the fingerprint sees where the parts end")
+    check(BookID.title(fileName: "Mein Heft.pdf") == "Mein Heft", "PP-004: the title is the file name without .pdf")
+
+    check(TaskTypeClassifier.kind(forHeader: "Number the pictures in the right order.") == .numberInOrder, "PP-013: 'number ... in the right order' is numbering")
+    check(TaskTypeClassifier.kind(forHeader: "Nummeriere in der richtigen Reihenfolge.") == .numberInOrder, "PP-013: 'Nummeriere ... Reihenfolge' is numbering")
+    check(TaskTypeClassifier.kind(forHeader: "Put the sentences in order.") == .ordering, "PP-013: 'put in order' is still ordering")
+
+    let onPages = Set(TestPages.specs.flatMap { $0 }.map { $0.kind })
+    check(TaskKind.allCases.allSatisfy { onPages.contains(TestPages.pageKind(for: $0)) }, "PP-016: every task kind is on a test page")
+    check(TestPages.specs.flatMap { $0 }.filter { $0.kind == "ordering" }.count >= 2, "PP-016: ordering is on at least two test pages")
 }
 
 print(failures == 0 ? "\nAll checks passed." : "\n\(failures) check(s) failed.")

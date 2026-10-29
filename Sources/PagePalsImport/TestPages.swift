@@ -19,7 +19,7 @@ public struct TestPage {
 public enum TestPages {
     /// The kind of task printed on a test page.
     public enum Spec: Equatable, Sendable {
-        case numbering(Int), fillIn(Int), tick(Int), matching, crossword, wordSearch, choice, open
+        case numbering(Int), fillIn(Int), tick(Int), matching, crossword, wordSearch, choice, open, ordering
 
         public var kind: String {
             switch self {
@@ -31,6 +31,7 @@ public enum TestPages {
             case .wordSearch: return "wordSearch"
             case .choice: return "choice"
             case .open: return "open"
+            case .ordering: return "ordering"
             }
         }
 
@@ -44,11 +45,28 @@ public enum TestPages {
             case .wordSearch: return "Find the words."
             case .choice: return "Read and choose."
             case .open: return "Colour the picture."
+            case .ordering: return "Put the sentences in order."
             }
         }
     }
 
-    public static let kinds = ["numbering", "fillIn", "tick", "matching", "crossword", "wordSearch", "choice", "open"]
+    /// The page kind that shows a task kind. Every task kind must be named here (no `default`), so a new
+    /// kind in the app cannot be forgotten by the test pages.
+    public static func pageKind(for kind: TaskKind) -> String {
+        switch kind {
+        case .numberInOrder: return "numbering"
+        case .fillIn: return "fillIn"
+        case .trueFalse: return "tick"
+        case .matching: return "matching"
+        case .crossword: return "crossword"
+        case .wordSearch: return "wordSearch"
+        case .multipleChoice: return "choice"
+        case .openTask: return "open"
+        case .ordering: return "ordering"
+        }
+    }
+
+    public static var kinds: [String] { TaskKind.allCases.map { pageKind(for: $0) } }
 
     /// What is printed on each page. Every kind of task appears at least twice.
     public static let specs: [[Spec]] = [
@@ -58,10 +76,10 @@ public enum TestPages {
         [.crossword, .numbering(3)],
         [.wordSearch, .fillIn(3)],
         [.numbering(5), .choice],
-        [.tick(3), .open],
+        [.tick(3), .open, .ordering],
         [.matching, .fillIn(4)],
         [.crossword, .open],
-        [.wordSearch, .choice]
+        [.wordSearch, .choice, .ordering]
     ]
 
     public static var count: Int { specs.count }
@@ -177,6 +195,12 @@ public enum TestPages {
             case .choice:
                 text("The cat is on the mat.  A) big   B) red   C) fast", 200, y + 50, size: 36)
                 y += 50 + 90
+            case .ordering:
+                let sentences = ["hot is the sun", "a cat has dog", "we sing a song", "the hat is red"]
+                for (i, sentence) in sentences.enumerated() {
+                    text(sentence, 240, y + 60 + Double(i) * 70, size: 38)
+                }
+                y += 60 + 4 * 70 + 50
             case .open:
                 ctx.setStrokeColor(gray: 0, alpha: 1)
                 ctx.setLineWidth(3)

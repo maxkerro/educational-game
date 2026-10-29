@@ -47,10 +47,13 @@ final class ImportModel: ObservableObject {
 
     private var book: PDFBook?
     private var bookName = "book"
+    private var bookFingerprint: UInt64 = 0
     private var keys: [String: AnswerKey] = [:]
 
     var canGoBack: Bool { (book != nil || libraryPack != nil) && pageIndex > 0 && !isWorking }
     var canGoForward: Bool { (book != nil || libraryPack != nil) && pageIndex < pageCount - 1 && !isWorking }
+    /// Tells books apart: stars and library folders use it, because task ids ("p1-t2") repeat in every book.
+    var bookScope: String { libraryID ?? BookID.make(fileName: bookName, fingerprint: bookFingerprint) }
     var canImportBook: Bool { book != nil && importTask == nil }
     var language: BookLanguage {
         if let pack = libraryPack { return BookLanguage(rawValue: pack.language) ?? .english }
@@ -64,8 +67,9 @@ final class ImportModel: ObservableObject {
     /// Reads every page of the open PDF into the library. Pages already done are not read again.
     func importBook() {
         guard let book, importTask == nil else { return }
-        let id = BookImporter.bookID(from: bookName)
-        let title = BookImporter.title(from: bookName)
+        let id = BookID.make(fileName: bookName, fingerprint: bookFingerprint)
+        let title = BookID.title(fileName: bookName)
+        let typed = keys
         let flag = CancelFlag()
         cancelFlag = flag
         let total = book.pageCount
@@ -81,19 +85,27 @@ final class ImportModel: ObservableObject {
         }
         importTask = Task { [weak self] in
             let result = await Task.detached(priority: .utility) {
-                BookImporter.run(book: book, id: id, title: title, library: lessons, cancel: flag, progress: report)
+                BookImporter.run(book: book, id: id, title: title, parentKeys: typed, library: lessons, cancel: flag, progress: report)
             }.value
             guard let self else { return }
             self.importFraction = nil
             self.importTask = nil
             self.library = lessons.list()
-            self.status = result.isDone
-                ? "\(title) is in the library (\(total) pages)."
-                : "Import stopped at \(result.finished.count) of \(total) pages. Import again to continue."
+            if !result.failed.isEmpty {
+                let list = result.failed.prefix(8).map(String.init).joined(separator: ", ")
+                self.status = "\(title): page(s) \(list) could not be read or saved. Import again to retry them."
+            } else if result.progress.isDone {
+                self.status = "\(title) is in the library (\(total) pages)."
+            } else {
+                self.status = "Import stopped at \(result.progress.finished.count) of \(total) pages. Import again to continue."
+            }
         }
     }
 
-    func cancelImport() { cancelFlag.raise() }
+    func cancelImport() {
+        cancelFlag.raise()
+        status = "Stopping after this page ..."
+    }
 
     func openFromLibrary(id: String) {
         guard importTask == nil, let pack = try? lessons.load(id: id), !pack.pages.isEmpty else {
@@ -150,6 +162,7 @@ final class ImportModel: ObservableObject {
             libraryID = nil
             libraryPack = nil
             bookName = url.lastPathComponent
+            bookFingerprint = BookImporter.fingerprint(of: url, pageCount: opened.pageCount)
             keys = KeyStore.load(book: bookName)
             scanTask?.cancel()
             generation += 1

@@ -10,6 +10,7 @@ struct ImportView: View {
     @StateObject private var model = ImportModel()
     @State private var showImporter = false
     @State private var playing: PlayTask?
+    @State private var confirmRemove: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -26,11 +27,24 @@ struct ImportView: View {
             if let page = model.pageBitmap {
                 switch task.kind {
                 case .multipleChoice, .matching, .ordering, .openTask:
-                    InteractiveTaskView(task: task, page: page, language: model.language) { model.saveKey($0, for: task.id) }
+                    InteractiveTaskView(task: task, page: page, language: model.language, scope: model.bookScope) { model.saveKey($0, for: task.id) }
                 default:
                     TaskPlayerView(task: task, page: page) { model.saveKey($0, for: task.id) }
                 }
             }
+        }
+        .confirmationDialog(
+            "Remove this book from the library?",
+            isPresented: Binding(get: { confirmRemove != nil }, set: { if !$0 { confirmRemove = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button("Remove book and its saved answers", role: .destructive) {
+                if let id = confirmRemove { model.deleteFromLibrary(id: id) }
+                confirmRemove = nil
+            }
+            Button("Keep it", role: .cancel) { confirmRemove = nil }
+        } message: {
+            Text("The pictures and the answers a grown-up typed are deleted. The PDF file is not touched.")
         }
         .fileImporter(isPresented: $showImporter, allowedContentTypes: [.pdf]) { result in
             if case .success(let url) = result { model.open(url: url) }
@@ -50,7 +64,7 @@ struct ImportView: View {
                 }
                 if let open = model.libraryID {
                     Divider()
-                    Button("Remove open book from library") { model.deleteFromLibrary(id: open) }
+                    Button("Remove open book from library ...") { confirmRemove = open }
                 }
             }
             .disabled(model.importFraction != nil)

@@ -329,8 +329,8 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] The image is split at the gutter
   - [ ] The printed page number is read and shown
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 88f2514
-- **Notes:** Old id A3. Partly done. Round 1 (M3): `PageSplit` finds the gutter from the column darkness (falls back to the centre) and maps boxes of the whole scan to the left or right page. Not yet used by the importer. Round 2: `PageAnalysis.split` cuts a wide scan at the gutter found from the column darkness, and `BookImporter` reads the printed page number of each half (`BookKeys.find`) into the book page. Written blind: never compiled or run on a real spread, so the gutter and number criteria stay open.
+- **Commits:** 88f2514, d7bb893, fe8efa3
+- **Notes:** Old id A3. Partly done. Round 1 (M3): `PageSplit` finds the gutter from the column darkness (falls back to the centre) and maps boxes of the whole scan to the left or right page. Not yet used by the importer. Round 2: `PageAnalysis.split` cuts a wide scan at the gutter found from the column darkness, and `BookImporter` reads the printed page number of each half (`PageNumbers.number`) into the book page. Written blind: never compiled or run on a real spread, so the gutter and number criteria stay open.
 
 ### PP-004 — Keep imported books in a library (A4)
 - **Status:** doing
@@ -343,8 +343,8 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Rename and delete a book
   - [ ] Pack has a version number and loads older versions
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 88f2514, 89b8ede, a4c4132
-- **Notes:** Old id A4. Round 1 (M3): `LessonLibrary` saves and loads a book folder (`pack.json` + picture files, atomic write), lists, renames, deletes, refuses ids with a path, loads packs without version or language and refuses newer ones. Not yet used by the app. Review 4: An empty title is refused when renaming. Review 5: an empty title has its own error (`emptyTitle`). Round 2: whole-book import writes `pack.json` after every page plus page pictures and `text-*.json` files; the Library menu lists, opens and removes books; keys a grown-up types are saved into the pack. Rename has no button yet. Cut-out pictures are not saved as separate files (tasks keep regions on the page picture). Never compiled or run.
+- **Commits:** 88f2514, 89b8ede, a4c4132, d7bb893, fe8efa3
+- **Notes:** Old id A4. Round 1 (M3): `LessonLibrary` saves and loads a book folder (`pack.json` + picture files, atomic write), lists, renames, deletes, refuses ids with a path, loads packs without version or language and refuses newer ones. Not yet used by the app. Review 4: An empty title is refused when renaming. Review 5: an empty title has its own error (`emptyTitle`). Round 2: whole-book import writes `pack.json` after every page plus page pictures and `text-*.json` files; the Library menu lists, opens and removes books; keys a grown-up types are saved into the pack. Rename has no button yet. Cut-out pictures are not saved as separate files (tasks keep regions on the page picture). Never compiled or run. Review 7: the library folder name holds a fingerprint of the file (`BookID`), so two different files called the same never share a folder or a half-finished import; answers a grown-up typed before the import are copied into the pack and kept when a page is read again; a page that could not be read or saved stays pending and is reported; removing a book asks first.
 
 ### PP-005 — See import progress, cancel and resume (A5)
 - **Status:** doing
@@ -355,8 +355,8 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Progress per page, Cancel button
   - [ ] Resumes after quit without redoing finished pages
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 88f2514, 89b8ede
-- **Notes:** Old id A5. Round 1 (M3): `ImportProgress` counts finished pages, saves them and resumes without redoing them; a changed page count starts fresh. The progress bar and Cancel button are not built. Review 4: A saved file with page numbers outside the book is cleaned on load. Round 2: `Import book` button with progress bar and Cancel; the progress file is saved after every page and a repeated import skips finished pages. Never compiled or run, so the criteria stay open.
+- **Commits:** 88f2514, 89b8ede, d7bb893, fe8efa3
+- **Notes:** Old id A5. Round 1 (M3): `ImportProgress` counts finished pages, saves them and resumes without redoing them; a changed page count starts fresh. The progress bar and Cancel button are not built. Review 4: A saved file with page numbers outside the book is cleaned on load. Round 2: `Import book` button with progress bar and Cancel; the progress file is saved after every page and a repeated import skips finished pages. Never compiled or run, so the criteria stay open. Review 7: a failed page is not marked finished (repeating the import retries it); Cancel shows "Stopping after this page".
 
 ### PP-008 — Cut out the pictures exactly as in the book (B2)
 - **Status:** doing
@@ -395,8 +395,8 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Words in the header ('Draw lines', 'Circle', 'Match', 'Colour', 'Crossword', 'Read and choose') choose the type
   - [ ] Unknown tasks become open tasks
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 88f2514, 89b8ede, a4c4132
-- **Notes:** Old id B7. Partly done. Round 1 (M3): `TaskTypeClassifier` chooses the kind from header words (English, German; whole words) and shapes. `TaskBuilder` does not use it yet because the other kinds have no page builders or players. Review 4: Colouring and drawing words beat empty circles. Review 5: numbering and writing phrases come before the open-task words, and only colouring or drawing verbs ('Colour', 'Draw', 'Male') beat empty circles; 'Read, say and number' is numbering. Review 6: A colouring or drawing verb makes empty circles part of the picture unless the header asks for numbering; writing words with answer bars give fill-in even when circles are found; 'Number and colour' is numbering; 'Circle the correct …' is choosing. A plain 'Circle …' waits for the circling kind (PP-022). Round 3 (M3): header words now also build choose-one, matching and ordering tasks (`OtherTasks`); crosswords, word searches and circling still become open tasks.
+- **Commits:** 88f2514, 89b8ede, a4c4132, 1ba71ef
+- **Notes:** Old id B7. Partly done. Round 1 (M3): `TaskTypeClassifier` chooses the kind from header words (English, German; whole words) and shapes. `TaskBuilder` does not use it yet because the other kinds have no page builders or players. Review 4: Colouring and drawing words beat empty circles. Review 5: numbering and writing phrases come before the open-task words, and only colouring or drawing verbs ('Colour', 'Draw', 'Male') beat empty circles; 'Read, say and number' is numbering. Review 6: A colouring or drawing verb makes empty circles part of the picture unless the header asks for numbering; writing words with answer bars give fill-in even when circles are found; 'Number and colour' is numbering; 'Circle the correct …' is choosing. A plain 'Circle …' waits for the circling kind (PP-022). Round 3 (M3): header words now also build choose-one, matching and ordering tasks (`OtherTasks`); crosswords, word searches and circling still become open tasks. Review 7: numbering verbs come before the ordering phrases ("Number the pictures in the right order" is numbering).
 
 ### PP-014 — Link each picture to its word or sentence (B8)
 - **Status:** todo
@@ -433,10 +433,10 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
 - **Acceptance criteria:**
   - [ ] At least 10 generated pages, every task type at least twice, no copyrighted content
   - [ ] A report shows found / missed per page
-  - [ ] `swift run PagePalsChecks` runs it
+  - [ ] `swift run -c release PagePalsChecks` runs it (a debug build skips the scoring: over a minute per page)
 - **Tests:** 
-- **Commits:** 
-- **Notes:** Old id B10. Round 1 (M3, 2026-10-29): `TestPages` draws ten pages (every task type at least twice, plain words and coloured blocks, no copyrighted content) with every circle, bar, tick circle, picture and header at a known place; `TestPages.score` runs the importer steps and `RecognitionScore` compares; `swift run PagePalsChecks` prints one INFO line per page. Written without running: the AC stay open until the first run shows the numbers in `.review/last-push.log`. The thresholds (circles, bars, ticks at least 80% found and 80% real; headers at least 90%) are guesses until then.
+- **Commits:** 912d691, 1660c73, afbfc75, 975b1e7
+- **Notes:** Old id B10. Round 1 (M3, 2026-10-29): `TestPages` draws ten pages (every task type at least twice, plain words and coloured blocks, no copyrighted content) with every circle, bar, tick circle, picture and header at a known place; `TestPages.score` runs the importer steps and `RecognitionScore` compares; `swift run PagePalsChecks` prints one INFO line per page. Written without running: the AC stay open until the first run shows the numbers in `.review/last-push.log`. The thresholds (circles, bars, ticks at least 80% found and 80% real; headers at least 90%) are guesses until then. Review 7: ordering is on two test pages and the list of required kinds comes from `TaskKind.allCases`. Round 2: the first release run scored headers 20/20, circles 12/12, bars 11/11; the tick finder took the smallest radius of a grey disc and was fixed (975b1e7).
 
 ### PP-020 — Draw lines to match (C4)
 - **Status:** doing
@@ -448,7 +448,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Wrong line wiggles back gently
   - [ ] Works picture-word and picture-picture
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 88f2514, 89b8ede
+- **Commits:** 88f2514, 89b8ede, 1ba71ef
 - **Notes:** Old id C4. Round 1 (M3): `LineMatching` judges where a dragged line ends (snap, wrong, missed). The drag view is not built. Review 4: A line drawn from either end is judged against the key; a line from something not in the key is wrong. Round 2 (M3): `OtherTasks.matching` pairs the pictures with as many short words; `InteractiveTaskView` draws a line from a picture to a word with a drag, snaps it, shakes a wrong one back. Never run.
 
 ### PP-021 — Choose one answer (C5)
@@ -460,7 +460,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Options as buttons with the book's text or pictures
   - [ ] Text can be read aloud (C12)
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 
+- **Commits:** 1ba71ef
 - **Notes:** Old id C5. Round 1 (M3): `OtherTasks.choice` builds the options from 'A) …' markers (one line or one per line) or short lines; `InteractiveTaskView` shows tappable options, reads the tapped text aloud (voices of the Mac) and judges by the key a grown-up sets once. The view has never been run.
 
 ### PP-022 — Circle or underline (C6)
@@ -508,7 +508,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Drag and drop with snap
   - [ ] Feedback per position
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 88f2514, 89b8ede
+- **Commits:** 88f2514, 89b8ede, 1ba71ef
 - **Notes:** Old id C9. Round 1 (M3): `OrderingBoard` starts unsolved, moves items and gives the answer in the key's shape. The drag view is not built. Review 4: The board starts in a seeded shuffle that is never the solution. Round 2 (M3): new task kind `ordering`, built from scrambled sentences (`OtherTasks.ordering`); `InteractiveTaskView` lists them with drag to move and a Check button. Never run.
 
 ### PP-026 — Do open tasks on paper and confirm (C10)
@@ -520,10 +520,10 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Shows the task page and a 'Done' button
   - [ ] A grown-up confirms, the star is given
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 
+- **Commits:** 1ba71ef
 - **Notes:** Old id C10. Round 1 (M3): open tasks open `InteractiveTaskView`: the page, a Done button, and an adult sum before the star is given (`StarStore`, kept on this Mac). Never run.
 
-## M4 — Three subjects
+## M4 — Three subjects Review 7: stars are kept per book and task, because task ids repeat in every book. Still no check of the view itself (open task, adult gate, star).
 
 ### PP-006 — Read English, German and Russian text (A6)
 - **Status:** doing
