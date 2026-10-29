@@ -21,6 +21,13 @@ public struct RecognizedLine: Identifiable, Equatable, Sendable {
     }
 }
 
+public extension PageOCR {
+    /// Reads a page of a book in the given language (its own language first, then the others it may mix in).
+    static func recognize(_ image: CGImage, language: BookLanguage) throws -> [RecognizedLine] {
+        try recognize(image, languages: language.recognitionLanguages)
+    }
+}
+
 public enum PageOCR {
     /// Reads text from a page bitmap with Apple's Vision framework (on-device).
     /// Vision reports boxes with a bottom-left origin; they are converted to top-left here.

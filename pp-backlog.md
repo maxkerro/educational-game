@@ -534,9 +534,9 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [x] English and German text recognised (Apple Vision, on device)
   - [ ] Russian recognised
   - [ ] Language per book, mixed-language pages work
-- **Tests:** 
+- **Tests:** Sources/PagePalsChecks/main.swift (detection only)
 - **Commits:** 
-- **Notes:** Old id A6. Partly done.
+- **Notes:** Old id A6. Partly done. Round 1 (M4): `BookLanguage` guesses English, German or Russian from page text (Cyrillic share, common words, umlauts) and gives the Vision languages with the book language first; `PageOCR.recognize(_:language:)` uses it. Not yet used by the importer, and Russian reading on a real page is not tested.
 
 ### PP-038 — Answer reading and grammar tasks with a local language model (D8)
 - **Status:** todo

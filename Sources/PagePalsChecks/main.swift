@@ -634,5 +634,17 @@ do {
     check(left.map { closeTo($0.x, 0.2) && closeTo($0.width, 0.4) } == true, "PP-003: left page rectangle in page coordinates")
 }
 
+// PP-006: book language
+do {
+    check(BookLanguage.detect(from: ["Write the words.", "How many lollies are there?"]) == .english, "PP-006: English page")
+    check(BookLanguage.detect(from: ["Schreibe die Wörter.", "Was ist das? Ergänze den Satz."]) == .german, "PP-006: German page")
+    check(BookLanguage.detect(from: ["Der Hund ist groß", "Straße"]) == .german, "PP-006: German by words and sharp s")
+    check(BookLanguage.detect(from: ["Напиши слова.", "Сколько яблок?"]) == .russian, "PP-006: Russian page")
+    check(BookLanguage.detect(from: ["1. Number.", "2. Match."]) == .english, "PP-006: no clue gives English")
+    check(BookLanguage.detect(from: ["Write the words.", "Напиши", "Der Hund ist ein Tier und die Katze"]) == .german, "PP-006: mixed page decided by the common words")
+    check(BookLanguage.russian.recognitionLanguages.first == "ru-RU" && BookLanguage.german.recognitionLanguages.first == "de-DE", "PP-006: own language is read first")
+    check(BookLanguage.allCases.map(\.rawValue) == ["en", "de", "ru"], "PP-006: pack language codes")
+}
+
 print(failures == 0 ? "\nAll checks passed." : "\n\(failures) check(s) failed.")
 exit(failures == 0 ? 0 : 1)
