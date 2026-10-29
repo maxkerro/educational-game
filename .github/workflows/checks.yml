@@ -2,9 +2,12 @@ name: checks
 
 # Builds the app and runs the logic checks on every push and pull request.
 # Uses only the Swift toolchain that comes with the runner (no Xcode project, no extra packages).
+# Compiler errors and failed checks are also written as annotations, so they can be read
+# through the GitHub API without downloading the log.
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -14,7 +17,38 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
+
       - name: Build
-        run: swift build
+        run: |
+          set -o pipefail
+          swift build 2>&1 | tee build.log
+        continue-on-error: true
+        id: build
+
       - name: Run checks
-        run: swift run PagePalsChecks
+        if: steps.build.outcome == 'success'
+        run: |
+          set -o pipefail
+          swift run PagePalsChecks 2>&1 | tee checks.log
+        continue-on-error: true
+        id: checks
+
+      - name: Report
+        if: always()
+        run: |
+          # first 40 compiler errors, then every failed check and any INFO line (test-page numbers)
+          grep -E "error:" build.log 2>/dev/null | sort -u | head -40 | while IFS= read -r line; do
+            echo "::error::${line:0:400}"
+          done
+          if [ -f checks.log ]; then
+            grep -E "FAIL|failed" checks.log | head -40 | while IFS= read -r line; do
+              echo "::error::${line:0:400}"
+            done
+            grep -E "INFO" checks.log | head -40 | while IFS= read -r line; do
+              echo "::notice::${line:0:400}"
+            done
+          fi
+
+      - name: Result
+        if: steps.build.outcome != 'success' || steps.checks.outcome != 'success'
+        run: exit 1
