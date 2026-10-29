@@ -56,9 +56,16 @@ public enum TaskEdit: Equatable, Sendable {
             var key = task.key ?? AnswerKey()
             let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
             key.text[id] = t.isEmpty ? nil : t
-            task.key = key
-            task.keySource = .parent
-            task.confidence = 1
+            if key.isEmpty {
+                // clearing the last answer leaves no key, so the task goes back to the grown-up
+                task.key = nil
+                task.keySource = nil
+                task.confirmed = nil
+            } else {
+                task.key = key
+                task.keySource = .parent
+                task.confidence = 1
+            }
         case let .assignPicture(id, file):
             if let i = task.items.firstIndex(where: { $0.id == id }) { task.items[i].imageFile = file }
         }

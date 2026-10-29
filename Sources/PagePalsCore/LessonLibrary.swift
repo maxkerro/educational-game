@@ -2,6 +2,7 @@ import Foundation
 
 public enum LibraryError: Error, Equatable {
     case badName
+    case emptyTitle
     case missing
     case tooNew(Int)
     case unreadable
@@ -87,7 +88,7 @@ public struct LessonLibrary: Sendable {
 
     public func rename(id: String, to title: String) throws {
         let clean = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !clean.isEmpty else { throw LibraryError.badName }
+        guard !clean.isEmpty else { throw LibraryError.emptyTitle }
         var pack = try load(id: id)
         pack.title = clean
         try save(pack, id: id)

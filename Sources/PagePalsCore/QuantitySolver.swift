@@ -50,7 +50,9 @@ public enum QuantitySolver {
         case blank
     }
 
-    public static func solve(_ text: String) -> String? {
+    /// `language` decides the decimal separator of an answer when no number in the question shows one
+    /// ("2 € + 50 ct" is "2,50 €" in German, "2.50 €" in English).
+    public static func solve(_ text: String, language: BookLanguage? = nil) -> String? {
         guard let pieces = scan(text) else { return nil }
 
         // Split into terms (lists of parts) and the signs between them.
@@ -116,7 +118,7 @@ public enum QuantitySolver {
             if index == 0 { result = value } else { result += signs[index - 1] == "+" ? value : -value }
         }
         guard result >= 0 else { return nil }
-        return format(result, fam, terms: terms)
+        return format(result, fam, terms: terms, language: language)
     }
 
     // MARK: - Reading the text
@@ -146,8 +148,8 @@ public enum QuantitySolver {
                     while j < c.count, c[j].isASCII, c[j].isNumber { digits.append(c[j]); decimals += 1; j += 1 }
                 }
                 guard digits.count <= 9, decimals <= 3 else { return nil }
-                // "1.000 m" is one thousand in German and one in English: do not guess
-                if !comma && decimals == 3 { return nil }
+                // "1.000 m" / "1,000 m" is one thousand in one language and one in the other: do not guess
+                if decimals == 3 { return nil }
                 pieces.append(.number(digits: digits, decimals: decimals, comma: comma))
                 i = j
             } else if ch.isLetter || ch == "\u{20AC}" {
@@ -201,7 +203,7 @@ public enum QuantitySolver {
 
     // MARK: - Writing the answer
 
-    private static func format(_ amount: Int, _ fam: Family, terms: [[Part]]) -> String? {
+    private static func format(_ amount: Int, _ fam: Family, terms: [[Part]], language: BookLanguage?) -> String? {
         let all = terms.flatMap { $0 }
 
         // Money with euros (also mixed with cents): "3,70 €"
@@ -209,8 +211,14 @@ public enum QuantitySolver {
             let anyDecimals = all.contains { $0.decimals > 0 }
             let euros = amount / 100
             let cents = amount % 100
-            let pointOnly = all.contains { $0.decimals > 0 && !$0.commaSeparator } && !all.contains { $0.commaSeparator }
-            let separator = pointOnly ? "." : ","
+            let separator: String
+            if all.contains(where: { $0.commaSeparator }) {
+                separator = ","
+            } else if all.contains(where: { $0.decimals > 0 }) {
+                separator = "."
+            } else {
+                separator = language == .english ? "." : ","
+            }
 
             if !anyDecimals && cents == 0 { return sign.prefixUnit ? "\(sign.printed) \(euros)" : "\(euros) \(sign.printed)" }
             guard cents >= 0 else { return nil }

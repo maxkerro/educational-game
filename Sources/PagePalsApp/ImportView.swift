@@ -109,11 +109,12 @@ struct ImportView: View {
                             Button("Play") { playing = task }
                                 .disabled(task.kind != .numberInOrder && task.kind != .fillIn && task.kind != .trueFalse)
                             if let source = sourceLabel(task) {
-                                Label(source, systemImage: "checkmark.seal")
+                                let unsure = AnswerReconciler.needsGrownUp(task)
+                                Label(source, systemImage: unsure ? "questionmark.circle" : "checkmark.seal")
                                     .font(.caption)
-                                    .foregroundStyle(.green)
+                                    .foregroundStyle(unsure ? Color.orange : Color.green)
                             }
-                            if needsGrownUp(task) {
+                            if needsGrownUp(task) && task.key == nil {
                                 Label("A grown-up must set the answers", systemImage: "exclamationmark.triangle.fill")
                                     .font(.caption)
                                     .foregroundStyle(.orange)

@@ -154,11 +154,11 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
 - **Story:** As a maintainer, I want checks to run before every push so that a bad change cannot reach GitHub.
 - **Description:** Safe for children, works without the internet. Old E0-4, E7-6.
 - **Acceptance criteria:**
-  - [x] `swift run PagePalsChecks` has over 250 checks and runs first in `push.sh`, before `git push` and the review hook
+  - [x] `swift run PagePalsChecks` has over 300 checks and runs first in `push.sh`, before `git push` and the review hook
   - [ ] Recognition quality checks on the test pages (B10)
   - [ ] GitHub Actions runs build and checks
 - **Tests:** 
-- **Commits:** 
+- **Commits:** f7595a9
 - **Notes:** Old id H3. Partly done. Round 2: GitHub Actions workflow written (.github/workflows/checks.yml, macOS runner: build and checks); the box stays open until its first green run.
 
 ### PP-067 — Build without Xcode (I1)
@@ -208,8 +208,8 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [x] Written columns, money, time and measures with units
   - [ ] Each solved example from the sample books matches the book's key
 - **Tests:** Sources/PagePalsChecks/main.swift (AC1, AC2) Sources/PagePalsChecks/main.swift (AC3)
-- **Commits:** f6ba927
-- **Notes:** Old id D2. Partly done. Round 2 (2026-10-28): units (mm to km, mg to t, ml to l, s to h) and money (comma or point, sign before or after) in `QuantitySolver`; sums in a column ("23" over "+ 45") in `ColumnSums`, with the answer bar below the stack in `TaskBuilder`. The answer is written in the smallest unit used, or in the units of a compound term ("2 h 15 min"). Not measured on the sample books. Review 4: '1.000 m' is not guessed (one thousand in German, one in English); '2 € + 50 ct' is answered '2,50 €'.
+- **Commits:** f6ba927, f7595a9, 89b8ede
+- **Notes:** Old id D2. Partly done. Round 2 (2026-10-28): units (mm to km, mg to t, ml to l, s to h) and money (comma or point, sign before or after) in `QuantitySolver`; sums in a column ("23" over "+ 45") in `ColumnSums`, with the answer bar below the stack in `TaskBuilder`. The answer is written in the smallest unit used, or in the units of a compound term ("2 h 15 min"). Not measured on the sample books. Review 4: '1.000 m' is not guessed (one thousand in German, one in English); '2 € + 50 ct' is answered '2,50 €'. Review 5: a comma with three digits ('1,000 m', '1,250 kg') is not guessed either; money answers take the separator from the book language when the question shows none.
 
 ### PP-033 — Read the answer pages of the book (D3)
 - **Status:** doing
@@ -221,7 +221,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] The importer reads all pages of a book in the background and applies the key to every page shown; the key is compared with the calculation (agree = trusted, disagree = a grown-up decides)
   - [x] Source 'answer page' shown to the grown-up (D12)
 - **Tests:** Sources/PagePalsChecks/main.swift (AC1) Sources/PagePalsChecks/main.swift (AC2, AC3)
-- **Commits:** b7dbbbf, 3bb0abc, c81f0b9
+- **Commits:** b7dbbbf, 3bb0abc, c81f0b9, f7595a9, 89b8ede
 - **Notes:** Old id D3. Partly done. Review 1 (2026-10-27): heading must consist only of key words ('Answer the questions' is a task page); entries keep their page/unit group and a task only gets a key when exactly one entry fits (pass the printed page to apply); fill-in success test added. Multi-word answers need a comma in the key. Review 2 (2026-10-28): keys in two or three columns are read column by column (a heading belongs to the nearest column, and a column starts without a group); headings 'Pages 12-13' or 'Seite 10/11' start an unknown group that is never used; 'S. 10' and 'Lösungen zu Seite 10' are read; 'Lösung', 'Solution' and a lone 'Answer' on the first line count as key headings. Grouped keys need the printed page number, which comes with PP-003 (AC3). Review 3: columns are told apart by the width of their boxes (narrow columns 0.09 apart work); a key heading with a page or unit ('Lösungen zu Seite 10', 'Answers Unit 1') groups the entries under it, so a one-page key is not applied to every page; Chapter, Module, Topic, Übung are group words and any other short 'word number' line (not a task number) starts an unknown group; 'Answers 1–20' is a key heading again. Round 2: `ImportModel` reads every page in the background after opening a book (`BookKeys.entries`), then applies the key to the tasks by printed page number (`PageNumbers`, `BookKeys.apply`) and compares it with a calculated answer (`AnswerReconciler`). The source is shown on each task in the Import tab. A key without page headings is never placed on a page. Unverified: runs only in the app, not covered by a check beyond the logic. Review 4: AC2 unticked and reworded to the reconciler design: page 1 is shown before the scan ends and the flow in the app has no check yet. A result from a book opened earlier can no longer reach the new book's pages (the importer drops work for an older book), and a key found while a page loads is applied when that page is done. Unit, chapter and lesson groups are no longer matched to printed page numbers (only 'Page', 'Seite', 'S.' groups are). The source label text moved to `AnswerReconciler.sourceLabel` and is checked (AC3); 'confirmed by a second method' is shown only after real agreement.
 
 ### PP-034 — Solve crosswords from the printed word list (D4)
@@ -260,7 +260,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] On the sample school-objects page at least 7 of 9 circles are right (measured, see D9)
   - [x] Low-confidence matches are marked for the grown-up
 - **Tests:** Sources/PagePalsChecks/main.swift (AC3)
-- **Commits:** 
+- **Commits:** f7595a9
 - **Notes:** Old id D6. Round 2: the pairing logic and its confidence are in `PictureMatching` (checked); the model itself (`PictureScoring`) is not built because no model file is available yet, see docs/OFFLINE_AI.md.
 
 ### PP-037 — Count things in a picture (D7)
@@ -272,7 +272,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Counts repeated small objects on the sample page correctly in at least 3 of 4 rows
   - [x] Uncertain counts are marked for the grown-up
 - **Tests:** Sources/PagePalsChecks/main.swift (AC2)
-- **Commits:** 
+- **Commits:** f7595a9
 - **Notes:** Old id D7. Round 2: `ObjectCounter` (classical blob counting, nil when the blobs differ in size) and `CountStatement` (reads the sentence, builds the tick key) are written; not measured on the sample page.
 
 ### PP-039 — Choose the offline AI runtime (spike) (D9)
@@ -288,7 +288,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] A model is downloaded once or put in place from a file; after that no network is used
   - [ ] Decision written to docs/OFFLINE_AI.md
 - **Tests:** 
-- **Commits:** 
+- **Commits:** f7595a9
 - **Notes:** Old id D9. Round 2: plan, interfaces and an empty results table are in docs/OFFLINE_AI.md. The measurements need a model file and the sample pages on the test Mac, so the spike is not run.
 
 ### PP-040 — Trust an answer only when methods agree (D10)
@@ -300,7 +300,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Calculation, answer page and model results are compared
   - [x] Agreement = trusted; disagreement or low score = marked
 - **Tests:** Sources/PagePalsChecks/main.swift (AC2)
-- **Commits:** 
+- **Commits:** f7595a9, 89b8ede
 - **Notes:** Old id D10. Round 2: `AnswerReconciler.merge` compares a calculated key with the answer-page key (agree: confidence 0.95; differ: no key, left to a grown-up). Model results are not compared yet because no model runs. Review 4: A key with a score below 0.5 that a grown-up did not type is marked for the grown-up (`AnswerReconciler.needsGrownUp`) and labelled 'unsure'; checked. Model results still do not run (AC1).
 
 ### PP-060 — Work completely offline (H1)
@@ -314,7 +314,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] A test with the network switched off passes
   - [ ] Only a one-time model download is allowed, and a model can also be put in place from a file
 - **Tests:** 
-- **Commits:** 
+- **Commits:** f7595a9, 89b8ede
 - **Notes:** Old id H1. Partly done. Round 2: a check scans the sources for network code (URLSession, NWConnection, ...). The sandbox setting is not changed because a sandboxed app would store its data in another place and lose the answers saved so far. Review 4: The offline check also searches subfolders and refuses 'http://', 'https://' and NSURLConnection.
 
 ## M3 — All task types
@@ -329,7 +329,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] The image is split at the gutter
   - [ ] The printed page number is read and shown
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 
+- **Commits:** 88f2514
 - **Notes:** Old id A3. Partly done. Round 1 (M3): `PageSplit` finds the gutter from the column darkness (falls back to the centre) and maps boxes of the whole scan to the left or right page. Not yet used by the importer.
 
 ### PP-004 — Keep imported books in a library (A4)
@@ -343,8 +343,8 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Rename and delete a book
   - [ ] Pack has a version number and loads older versions
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 
-- **Notes:** Old id A4. Round 1 (M3): `LessonLibrary` saves and loads a book folder (`pack.json` + picture files, atomic write), lists, renames, deletes, refuses ids with a path, loads packs without version or language and refuses newer ones. Not yet used by the app. Review 4: An empty title is refused when renaming.
+- **Commits:** 88f2514, 89b8ede
+- **Notes:** Old id A4. Round 1 (M3): `LessonLibrary` saves and loads a book folder (`pack.json` + picture files, atomic write), lists, renames, deletes, refuses ids with a path, loads packs without version or language and refuses newer ones. Not yet used by the app. Review 4: An empty title is refused when renaming. Review 5: an empty title has its own error (`emptyTitle`).
 
 ### PP-005 — See import progress, cancel and resume (A5)
 - **Status:** doing
@@ -355,7 +355,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Progress per page, Cancel button
   - [ ] Resumes after quit without redoing finished pages
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 
+- **Commits:** 88f2514, 89b8ede
 - **Notes:** Old id A5. Round 1 (M3): `ImportProgress` counts finished pages, saves them and resumes without redoing them; a changed page count starts fresh. The progress bar and Cancel button are not built. Review 4: A saved file with page numbers outside the book is cleaned on load.
 
 ### PP-008 — Cut out the pictures exactly as in the book (B2)
@@ -395,8 +395,8 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Words in the header ('Draw lines', 'Circle', 'Match', 'Colour', 'Crossword', 'Read and choose') choose the type
   - [ ] Unknown tasks become open tasks
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 
-- **Notes:** Old id B7. Partly done. Round 1 (M3): `TaskTypeClassifier` chooses the kind from header words (English, German; whole words) and shapes. `TaskBuilder` does not use it yet because the other kinds have no page builders or players. Review 4: Colouring and drawing words beat empty circles.
+- **Commits:** 88f2514, 89b8ede
+- **Notes:** Old id B7. Partly done. Round 1 (M3): `TaskTypeClassifier` chooses the kind from header words (English, German; whole words) and shapes. `TaskBuilder` does not use it yet because the other kinds have no page builders or players. Review 4: Colouring and drawing words beat empty circles. Review 5: numbering and writing phrases come before the open-task words, and only colouring or drawing verbs ('Colour', 'Draw', 'Male') beat empty circles; 'Read, say and number' is numbering.
 
 ### PP-014 — Link each picture to its word or sentence (B8)
 - **Status:** todo
@@ -448,7 +448,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Wrong line wiggles back gently
   - [ ] Works picture-word and picture-picture
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 
+- **Commits:** 88f2514, 89b8ede
 - **Notes:** Old id C4. Round 1 (M3): `LineMatching` judges where a dragged line ends (snap, wrong, missed). The drag view is not built. Review 4: A line drawn from either end is judged against the key; a line from something not in the key is wrong.
 
 ### PP-021 — Choose one answer (C5)
@@ -508,7 +508,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Drag and drop with snap
   - [ ] Feedback per position
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 
+- **Commits:** 88f2514, 89b8ede
 - **Notes:** Old id C9. Round 1 (M3): `OrderingBoard` starts unsolved, moves items and gives the answer in the key's shape. The drag view is not built. Review 4: The board starts in a seeded shuffle that is never the solution.
 
 ### PP-026 — Do open tasks on paper and confirm (C10)
@@ -535,7 +535,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Russian recognised
   - [ ] Language per book, mixed-language pages work
 - **Tests:** Sources/PagePalsChecks/main.swift (detection only)
-- **Commits:** 
+- **Commits:** d37952a, 89b8ede
 - **Notes:** Old id A6. Partly done. Round 1 (M4): `BookLanguage` guesses English, German or Russian from page text (Cyrillic share, common words, umlauts) and gives the Vision languages with the book language first; `PageOCR.recognize(_:language:)` uses it. Not yet used by the importer, and Russian reading on a real page is not tested. Review 4: Words shared by English and German ('was', 'in', 'an') no longer count.
 
 ### PP-038 — Answer reading and grammar tasks with a local language model (D8)
@@ -599,7 +599,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Drop a PDF on the window opens it
   - [ ] Last 5 books are listed on the start screen
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 
+- **Commits:** 7460a04
 - **Notes:** Old id A2. Round 1 (M5): `RecentBooks` keeps the last 5 books, newest first, and accepts only PDFs for drop. Start screen and drop target not built.
 
 ### PP-027 — Get hints that do not give the answer away (C11)
@@ -611,7 +611,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] After two wrong tries the field is highlighted
   - [ ] Then the first letter or the matching word is shown
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 
+- **Commits:** 7460a04
 - **Notes:** Old id C11. Round 1 (M5): `HintTracker`: highlight after two wrong tries, first letter after three; no hint when the first character is the answer (digits, one letter). Not shown in the player yet.
 
 ### PP-028 — Hear words read aloud (C12)
@@ -623,8 +623,8 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Works offline with the voices installed on the Mac (English, German)
   - [ ] Speed control
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 
-- **Notes:** Old id C12. Round 1 (M5): `SpeechSettings` (voice language per book, speed) and `Speaker` (system voices, offline). No tap-to-hear in the player yet; never run.
+- **Commits:** 7460a04
+- **Notes:** Old id C12. Round 1 (M5): `SpeechSettings` (voice language per book, speed) and `Speaker` (system voices, offline). No tap-to-hear in the player yet; never run. Review 5: when no voice for the book language is installed, nothing is read (instead of the English voice reading German or Russian).
 
 ### PP-042 — See where an answer came from (D12)
 - **Status:** doing
@@ -634,8 +634,8 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
 - **Acceptance criteria:**
   - [ ] Source label on the task card and in the review editor
 - **Tests:** 
-- **Commits:** 
-- **Notes:** Old id D12. Partly done. Round 2: the source (calculated, answer page, typed by a grown-up, on-device model) is shown on each task in the Import tab; the review editor (G2, PP-054) does not exist yet.
+- **Commits:** f7595a9
+- **Notes:** Old id D12. Partly done. Round 2: the source (calculated, answer page, typed by a grown-up, on-device model) is shown on each task in the Import tab; the review editor (G2, PP-054) does not exist yet. Review 4/5: the label text is `AnswerReconciler.sourceLabel` (checked); 'confirmed by a second method' only after real agreement; an unsure answer says '(unsure, please check)' and is drawn orange instead of with the green seal.
 
 ### PP-046 — Grow a Pal with stars (F1)
 - **Status:** doing
@@ -646,7 +646,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Three growth stages, original art
   - [ ] Stars per task
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 
+- **Commits:** 7460a04
 - **Notes:** Old id F1. Round 1 (M5): `StarLedger`: 3/2/1 stars per task by wrong tries, best result per task only, three stages at 0/15/45 stars. No Pal art or view yet.
 
 ### PP-047 — Travel a world map (F2)
@@ -657,7 +657,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
 - **Acceptance criteria:**
   - [ ] Chapters = islands, pages = stops, calm unlocking
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 
+- **Commits:** 7460a04
 - **Notes:** Old id F2. Round 1 (M5): `WorldMap.islands`: chapters become islands, pages stops; the next island opens when half of the one before is done. No map view yet; chapters still need to come from the book.
 
 ### PP-048 — Gentle daily streak (F3)
@@ -668,7 +668,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
 - **Acceptance criteria:**
   - [ ] No loss framing, no guilt messages
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 
+- **Commits:** 7460a04
 - **Notes:** Old id F3. Round 1 (M5): `VisitLog`: greetings only cheer ('2 days in a row', 'Welcome back'); missed days are never mentioned. Not shown yet.
 
 ### PP-049 — Pal reacts (F4)
@@ -679,7 +679,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
 - **Acceptance criteria:**
   - [ ] Cheer on right, comfort on wrong, nap when I stop
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 
+- **Commits:** 7460a04
 - **Notes:** Old id F4. Round 1 (M5): `PalReaction`: cheer on right, comfort on wrong (no blame), nap after 2 minutes idle; lines in English, German, Russian. No animation yet.
 
 ### PP-050 — Sounds and music (F5)
@@ -690,7 +690,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
 - **Acceptance criteria:**
   - [ ] Mute and volume, all sounds optional
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 
+- **Commits:** 7460a04
 - **Notes:** Old id F5. Round 1 (M5): `SoundSettings`: mute silences everything, volume kept in range, effects optional, music off by default. No sounds are played yet.
 
 ### PP-051 — Room with collectibles (F6)
@@ -701,7 +701,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
 - **Acceptance criteria:**
   - [ ] Earned, never bought
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 
+- **Commits:** 7460a04
 - **Notes:** Old id F6. Round 1 (M5): `Room`: things are earned at star levels (stars are not spent) and can be placed and removed. No room view or art yet.
 
 ### PP-054 — Correct what the app got wrong (G2)
@@ -715,8 +715,8 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Assign a picture to a word
   - [ ] Undo and redo
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 
-- **Notes:** Old id G2. Round 1 (M5): `EditHistory` (undo/redo) and `TaskEdit` (move a box, change type, prompt, answers, picture). The editor view is not built.
+- **Commits:** 7460a04
+- **Notes:** Old id G2. Round 1 (M5): `EditHistory` (undo/redo) and `TaskEdit` (move a box, change type, prompt, answers, picture). The editor view is not built. Review 5: clearing the last answer removes the key, so the task goes back to the grown-up.
 
 ### PP-055 — Open the grown-up area safely (G3)
 - **Status:** doing
@@ -726,7 +726,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
 - **Acceptance criteria:**
   - [ ] A small adult challenge before the area opens
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 
+- **Commits:** 7460a04
 - **Notes:** Old id G3. Round 1 (M5): `AdultGate` (two-digit times one-digit sum) and `GateLock` (three mistakes lock for a minute). Not shown before the parent area yet.
 
 ### PP-056 — See progress (G4)
@@ -737,7 +737,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
 - **Acceptance criteria:**
   - [ ] Per child, per book, per task type
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 
+- **Commits:** 7460a04
 - **Notes:** Old id G4. Round 1 (M5): `ProgressReport`: accuracy per child, book and task type, and hard items. Attempts are not recorded by the player yet.
 
 ### PP-057 — Set a daily time limit (G5)
@@ -748,7 +748,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
 - **Acceptance criteria:**
   - [ ] The Pal says goodbye, no cut-off in the middle of a task
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 
+- **Commits:** 7460a04
 - **Notes:** Old id G5. Round 1 (M5): `SessionLimit`: wind-down two minutes before the limit, never in the middle of a task, then goodbye. Not connected to a clock yet.
 
 ### PP-058 — Several children (G6)
@@ -759,7 +759,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
 - **Acceptance criteria:**
   - [ ] Local profiles, no accounts
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 
+- **Commits:** 7460a04
 - **Notes:** Old id G6. Round 1 (M5): `ProfileList`: local profiles with unique names, saved to a file. No profile picker yet.
 
 ## M6 — Release

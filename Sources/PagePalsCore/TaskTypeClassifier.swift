@@ -20,20 +20,26 @@ public enum TaskTypeClassifier {
         (.matching, ["draw lines", "draw a line", "match", "join", "connect", "verbinde", "ordne zu", "zeichne linien"]),
         (.trueFalse, ["tick", "true or false", "correct or wrong", "richtig oder falsch", "kreuze an"]),
         (.multipleChoice, ["read and choose", "choose", "wähle", "waehle", "lies und wähle", "kreuze die richtige"]),
-        (.openTask, ["colour", "color", "draw", "sing", "say", "speak", "male", "zeichne", "sprich", "singe"]),
+        // numbering and writing come before the open-task words: "Read, say and number the pictures" is numbering
         (.numberInOrder, ["number the", "put in order", "in order", "nummeriere", "reihenfolge"]),
-        (.fillIn, ["write", "fill in", "complete", "schreibe", "ergänze", "setze ein"])
+        (.fillIn, ["write", "fill in", "complete", "schreibe", "ergänze", "setze ein"]),
+        (.openTask, ["colour", "color", "draw", "sing", "say", "speak", "male", "zeichne", "sprich", "singe"])
     ]
+
+    /// Colouring and drawing verbs: circles in such a task are part of the picture, not answer circles.
+    private static let colouringWords: Set<String> = ["colour", "color", "draw", "male", "zeichne"]
 
     /// Kinds that only the words can tell; shapes never override them.
     private static let structural: Set<TaskKind> = [.crossword, .wordSearch, .matching, .multipleChoice]
 
     /// Kind suggested by the header words alone, or `nil` when no rule fits. Whole words only ("stick" is not "tick").
+    static func words(_ header: String) -> [String] {
+        header.lowercased().split(whereSeparator: { !$0.isLetter }).map(String.init)
+    }
+
     public static func kind(forHeader header: String) -> TaskKind? {
-        let words = header.lowercased()
-            .split(whereSeparator: { !$0.isLetter })
-            .map(String.init)
-        let padded = " " + words.joined(separator: " ") + " "
+        let tokens = Self.words(header)
+        let padded = " " + tokens.joined(separator: " ") + " "
         for (kind, phrases) in rules {
             for phrase in phrases where padded.contains(" " + phrase + " ") { return kind }
         }
@@ -44,8 +50,10 @@ public enum TaskTypeClassifier {
     public static func classify(header: String, shapes: Shapes = Shapes()) -> TaskKind {
         let byWords = kind(forHeader: header)
         if let k = byWords, structural.contains(k) { return k }
-        // "Colour the balloons": circles in a colouring picture are not answer circles
-        if byWords == .openTask && shapes.tickCircles < 2 && shapes.answerBars == 0 { return .openTask }
+        // "Colour the balloons": circles in a colouring picture are not answer circles. Only colouring or drawing
+        // verbs do this, and only when no numbering or writing phrase is in the header (those rules come first).
+        if byWords == .openTask, shapes.tickCircles < 2, shapes.answerBars == 0,
+           Self.words(header).contains(where: { colouringWords.contains($0) }) { return .openTask }
         if shapes.tickCircles >= 2 { return .trueFalse }
         if shapes.emptyCircles >= 1 { return .numberInOrder }
         if shapes.answerBars >= 1 { return .fillIn }

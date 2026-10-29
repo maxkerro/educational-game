@@ -54,6 +54,11 @@ public struct AnswerKey: Codable, Equatable, Sendable {
     public var pairs: [String: String]   // item id -> target item id
     public var choice: String?           // chosen item id for multipleChoice
 
+    /// No answers of any kind.
+    public var isEmpty: Bool {
+        text.isEmpty && booleans.isEmpty && order.isEmpty && pairs.isEmpty && choice == nil
+    }
+
     public init(
         text: [String: String] = [:],
         booleans: [String: Bool] = [:],

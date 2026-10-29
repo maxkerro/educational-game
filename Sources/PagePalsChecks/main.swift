@@ -810,7 +810,9 @@ do {
 do {
     // German thousands separator and mixed money
     check(QuantitySolver.solve("1.000 m + 500 m =") == nil && QuantitySolver.solve("1.000 g + 250 g =") == nil, "units: '1.000' is not guessed (thousand in German, one in English)")
-    check(QuantitySolver.solve("1,250 kg + 250 g =") == "1500 g", "units: German decimal comma with three digits")
+    check(QuantitySolver.solve("1,250 kg + 250 g =") == nil && QuantitySolver.solve("1,000 m + 500 m =") == nil, "units: a comma with three digits is not guessed either")
+    check(QuantitySolver.solve("1,25 kg + 250 g =") == "1500 g", "units: German decimal comma")
+    check(QuantitySolver.solve("\u{20AC} 2 + 50 ct =", language: .english) == "\u{20AC} 2.50" && QuantitySolver.solve("2 \u{20AC} + 50 ct =", language: .german) == "2,50 \u{20AC}", "money: separator from the book language when the question shows none")
     check(QuantitySolver.solve("2 \u{20AC} + 50 ct =") == "2,50 \u{20AC}", "money: euros and cents are answered in euros")
     check(QuantitySolver.solve("30 ct + 20 ct =") == "50 ct", "money: cents only stay cents")
 
@@ -864,6 +866,27 @@ do {
     check(BookLanguage.detect(from: ["It was in the box.", "It was an apple."]) == .english, "PP-006: 'was', 'in' and 'an' do not count for German")
     let minus = ColumnSums.find([textLine("68", 0.10, 0.30, width: 0.06), textLine("- 23", 0.08, 0.335, width: 0.08)])
     check(minus.first?.expression == "68 - 23 =" && MathSolver.solve("68 - 23 =") == "45", "column sums: subtraction")
+}
+
+// Review 5 fixes
+do {
+    check(TaskTypeClassifier.classify(header: "Read, say and number the pictures.", shapes: .init(emptyCircles: 6)) == .numberInOrder, "PP-013: 'say and number' is numbering")
+    check(TaskTypeClassifier.classify(header: "Number the pictures and colour them.", shapes: .init(emptyCircles: 6)) == .numberInOrder, "PP-013: 'number and colour' is numbering")
+    check(TaskTypeClassifier.classify(header: "Say the words.", shapes: .init(emptyCircles: 3)) == .numberInOrder, "PP-013: only colouring verbs override circles")
+    check(TaskTypeClassifier.classify(header: "Colour the balloons.", shapes: .init(emptyCircles: 4)) == .openTask, "PP-013: colouring still beats empty circles")
+
+    var cleared = PlayTask(id: "c", kind: .fillIn, prompt: "1. Write.", items: [TaskItem(id: "a")], key: AnswerKey(text: ["a": "4"]), confidence: 0.8, keySource: .calculated)
+    TaskEdit.setAnswer(itemId: "a", text: "  ").apply(to: &cleared)
+    check(cleared.key == nil && cleared.keySource == nil && AnswerReconciler.needsGrownUp(cleared), "PP-054: clearing the only answer leaves no key")
+    check(AnswerKey().isEmpty && !AnswerKey(choice: "x").isEmpty, "PP-054: empty key")
+
+    let lib3Dir = FileManager.default.temporaryDirectory.appendingPathComponent("pp-lib3-" + UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: lib3Dir) }
+    let lib3 = LessonLibrary(root: lib3Dir)
+    try? lib3.save(LessonPack(title: "Keep", language: "en"), id: "b1")
+    var titleError: LibraryError?
+    do { try lib3.rename(id: "b1", to: " ") } catch let e as LibraryError { titleError = e } catch {}
+    check(titleError == .emptyTitle, "PP-004: an empty title has its own error")
 }
 
 print(failures == 0 ? "\nAll checks passed." : "\n\(failures) check(s) failed.")
