@@ -4,6 +4,9 @@ import PagePalsImport
 
 // A tiny test runner that needs no XCTest. Run with: swift run PagePalsChecks
 
+// lines appear at once even when the output goes through a pipe (push.sh), so a slow check can be seen
+setvbuf(stdout, nil, _IOLBF, 0)
+
 var failures = 0
 
 func check(_ condition: @autoclosure () -> Bool, _ name: String) {
@@ -943,8 +946,9 @@ do {
         let again = TestPages.page(i)
         if i == 0 { check(page.circles == again.circles && page.bars == again.bars && page.headerNumbers == again.headerNumbers, "test pages: the same page every time") }
         do {
+            let started = Date()
             let score = try TestPages.score(page)
-            print("INFO  " + score.line)
+            print("INFO  " + score.line + String(format: "  (%.1f s)", Date().timeIntervalSince(started)))
             circles = circles + score.circles
             bars = bars + score.bars
             ticks = ticks + score.ticks
