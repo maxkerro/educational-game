@@ -19,9 +19,10 @@ public enum TaskTypeClassifier {
         (.wordSearch, ["word search", "wordsearch", "wortsuche", "buchstabengitter", "find the words", "finde die wörter", "suche die wörter"]),
         (.matching, ["draw lines", "draw a line", "match", "join", "connect", "verbinde", "ordne zu", "zeichne linien"]),
         (.trueFalse, ["tick", "true or false", "correct or wrong", "richtig oder falsch", "kreuze an"]),
-        (.multipleChoice, ["read and choose", "choose", "wähle", "waehle", "lies und wähle", "kreuze die richtige"]),
+        (.multipleChoice, ["read and choose", "choose", "wähle", "waehle", "lies und wähle", "kreuze die richtige",
+                           "circle the correct", "circle the right", "kreise das richtige", "kreise die richtige"]),
         // numbering and writing come before the open-task words: "Read, say and number the pictures" is numbering
-        (.numberInOrder, ["number the", "put in order", "in order", "nummeriere", "reihenfolge"]),
+        (.numberInOrder, ["number the", "number and", "put in order", "in order", "nummeriere", "reihenfolge"]),
         (.fillIn, ["write", "fill in", "complete", "schreibe", "ergänze", "setze ein"]),
         (.openTask, ["colour", "color", "draw", "sing", "say", "speak", "male", "zeichne", "sprich", "singe"])
     ]
@@ -32,11 +33,13 @@ public enum TaskTypeClassifier {
     /// Kinds that only the words can tell; shapes never override them.
     private static let structural: Set<TaskKind> = [.crossword, .wordSearch, .matching, .multipleChoice]
 
-    /// Kind suggested by the header words alone, or `nil` when no rule fits. Whole words only ("stick" is not "tick").
-    static func words(_ header: String) -> [String] {
+    /// The header in lower case, split into words.
+    private static func words(_ header: String) -> [String] {
         header.lowercased().split(whereSeparator: { !$0.isLetter }).map(String.init)
     }
 
+    /// Kind suggested by the header words alone, or `nil` when no rule fits. Whole words only ("stick" is not "tick").
+    /// A plain "Circle ..." has no rule yet: circling gets its own kind with PP-022.
     public static func kind(forHeader header: String) -> TaskKind? {
         let tokens = Self.words(header)
         let padded = " " + tokens.joined(separator: " ") + " "
@@ -46,17 +49,28 @@ public enum TaskTypeClassifier {
         return nil
     }
 
-    /// Final kind: structural words win, then shapes, then the other words; unknown tasks become open tasks.
+    /// Final kind: structural words win, then tick circles, then the writing or numbering words together with the
+    /// shapes; unknown tasks become open tasks. With a colouring or drawing verb, empty circles are part of the
+    /// picture and are ignored, unless the header asks for numbering.
     public static func classify(header: String, shapes: Shapes = Shapes()) -> TaskKind {
         let byWords = kind(forHeader: header)
         if let k = byWords, structural.contains(k) { return k }
-        // "Colour the balloons": circles in a colouring picture are not answer circles. Only colouring or drawing
-        // verbs do this, and only when no numbering or writing phrase is in the header (those rules come first).
-        if byWords == .openTask, shapes.tickCircles < 2, shapes.answerBars == 0,
-           Self.words(header).contains(where: { colouringWords.contains($0) }) { return .openTask }
         if shapes.tickCircles >= 2 { return .trueFalse }
-        if shapes.emptyCircles >= 1 { return .numberInOrder }
-        if shapes.answerBars >= 1 { return .fillIn }
-        return byWords ?? .openTask
+        let colouring = Self.words(header).contains { colouringWords.contains($0) }
+        let circles = colouring && byWords != .numberInOrder ? 0 : shapes.emptyCircles
+        switch byWords {
+        case .fillIn?:
+            if shapes.answerBars >= 1 { return .fillIn }
+            if circles >= 1 { return .numberInOrder }
+            return colouring ? .openTask : .fillIn
+        case .numberInOrder?:
+            if circles >= 1 { return .numberInOrder }
+            if shapes.answerBars >= 1 { return .fillIn }
+            return .numberInOrder
+        default:
+            if circles >= 1 { return .numberInOrder }
+            if shapes.answerBars >= 1 { return .fillIn }
+            return byWords ?? .openTask
+        }
     }
 }

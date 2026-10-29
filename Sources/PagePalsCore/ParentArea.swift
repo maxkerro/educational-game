@@ -53,9 +53,12 @@ public enum TaskEdit: Equatable, Sendable {
         case let .setPrompt(prompt):
             task.prompt = prompt
         case let .setAnswer(id, text):
-            var key = task.key ?? AnswerKey()
             let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            key.text[id] = t.isEmpty ? nil : t
+            let after: String? = t.isEmpty ? nil : t
+            // nothing changed: the key keeps its source and score
+            guard task.key?.text[id] != after else { return }
+            var key = task.key ?? AnswerKey()
+            key.text[id] = after
             if key.isEmpty {
                 // clearing the last answer leaves no key, so the task goes back to the grown-up
                 task.key = nil

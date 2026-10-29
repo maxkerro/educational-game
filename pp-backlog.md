@@ -208,8 +208,8 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [x] Written columns, money, time and measures with units
   - [ ] Each solved example from the sample books matches the book's key
 - **Tests:** Sources/PagePalsChecks/main.swift (AC1, AC2) Sources/PagePalsChecks/main.swift (AC3)
-- **Commits:** f6ba927, f7595a9, 89b8ede
-- **Notes:** Old id D2. Partly done. Round 2 (2026-10-28): units (mm to km, mg to t, ml to l, s to h) and money (comma or point, sign before or after) in `QuantitySolver`; sums in a column ("23" over "+ 45") in `ColumnSums`, with the answer bar below the stack in `TaskBuilder`. The answer is written in the smallest unit used, or in the units of a compound term ("2 h 15 min"). Not measured on the sample books. Review 4: '1.000 m' is not guessed (one thousand in German, one in English); '2 € + 50 ct' is answered '2,50 €'. Review 5: a comma with three digits ('1,000 m', '1,250 kg') is not guessed either; money answers take the separator from the book language when the question shows none.
+- **Commits:** f6ba927, f7595a9, 89b8ede, a4c4132
+- **Notes:** Old id D2. Partly done. Round 2 (2026-10-28): units (mm to km, mg to t, ml to l, s to h) and money (comma or point, sign before or after) in `QuantitySolver`; sums in a column ("23" over "+ 45") in `ColumnSums`, with the answer bar below the stack in `TaskBuilder`. The answer is written in the smallest unit used, or in the units of a compound term ("2 h 15 min"). Not measured on the sample books. Review 4: '1.000 m' is not guessed (one thousand in German, one in English); '2 € + 50 ct' is answered '2,50 €'. Review 5: a comma with three digits ('1,000 m', '1,250 kg') is not guessed either; money answers take the separator from the book language when the question shows none. Review 6: The book language is not passed to the solver in the app yet, so a money answer may use a comma in an English book; the checker now accepts either decimal separator ('2.50 €' = '2,50 €'), so the child is not marked wrong.
 
 ### PP-033 — Read the answer pages of the book (D3)
 - **Status:** doing
@@ -222,7 +222,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [x] Source 'answer page' shown to the grown-up (D12)
 - **Tests:** Sources/PagePalsChecks/main.swift (AC1) Sources/PagePalsChecks/main.swift (AC2, AC3)
 - **Commits:** b7dbbbf, 3bb0abc, c81f0b9, f7595a9, 89b8ede
-- **Notes:** Old id D3. Partly done. Review 1 (2026-10-27): heading must consist only of key words ('Answer the questions' is a task page); entries keep their page/unit group and a task only gets a key when exactly one entry fits (pass the printed page to apply); fill-in success test added. Multi-word answers need a comma in the key. Review 2 (2026-10-28): keys in two or three columns are read column by column (a heading belongs to the nearest column, and a column starts without a group); headings 'Pages 12-13' or 'Seite 10/11' start an unknown group that is never used; 'S. 10' and 'Lösungen zu Seite 10' are read; 'Lösung', 'Solution' and a lone 'Answer' on the first line count as key headings. Grouped keys need the printed page number, which comes with PP-003 (AC3). Review 3: columns are told apart by the width of their boxes (narrow columns 0.09 apart work); a key heading with a page or unit ('Lösungen zu Seite 10', 'Answers Unit 1') groups the entries under it, so a one-page key is not applied to every page; Chapter, Module, Topic, Übung are group words and any other short 'word number' line (not a task number) starts an unknown group; 'Answers 1–20' is a key heading again. Round 2: `ImportModel` reads every page in the background after opening a book (`BookKeys.entries`), then applies the key to the tasks by printed page number (`PageNumbers`, `BookKeys.apply`) and compares it with a calculated answer (`AnswerReconciler`). The source is shown on each task in the Import tab. A key without page headings is never placed on a page. Unverified: runs only in the app, not covered by a check beyond the logic. Review 4: AC2 unticked and reworded to the reconciler design: page 1 is shown before the scan ends and the flow in the app has no check yet. A result from a book opened earlier can no longer reach the new book's pages (the importer drops work for an older book), and a key found while a page loads is applied when that page is done. Unit, chapter and lesson groups are no longer matched to printed page numbers (only 'Page', 'Seite', 'S.' groups are). The source label text moved to `AnswerReconciler.sourceLabel` and is checked (AC3); 'confirmed by a second method' is shown only after real agreement.
+- **Notes:** Old id D3. Partly done. Review 1 (2026-10-27): heading must consist only of key words ('Answer the questions' is a task page); entries keep their page/unit group and a task only gets a key when exactly one entry fits (pass the printed page to apply); fill-in success test added. Multi-word answers need a comma in the key. Review 2 (2026-10-28): keys in two or three columns are read column by column (a heading belongs to the nearest column, and a column starts without a group); headings 'Pages 12-13' or 'Seite 10/11' start an unknown group that is never used; 'S. 10' and 'Lösungen zu Seite 10' are read; 'Lösung', 'Solution' and a lone 'Answer' on the first line count as key headings. Grouped keys need the printed page number, which comes with PP-003 (AC3). Review 3: columns are told apart by the width of their boxes (narrow columns 0.09 apart work); a key heading with a page or unit ('Lösungen zu Seite 10', 'Answers Unit 1') groups the entries under it, so a one-page key is not applied to every page; Chapter, Module, Topic, Übung are group words and any other short 'word number' line (not a task number) starts an unknown group; 'Answers 1–20' is a key heading again. Round 2: `ImportModel` reads every page in the background after opening a book (`BookKeys.entries`), then applies the key to the tasks by printed page number (`PageNumbers`, `BookKeys.apply`) and compares it with a calculated answer (`AnswerReconciler`). The source is shown on each task in the Import tab. A key without page headings is never placed on a page. Unverified: runs only in the app, not covered by a check beyond the logic. Review 4: AC2 unticked and reworded to the reconciler design: page 1 is shown before the scan ends and the flow in the app has no check yet. A result from a book opened earlier can no longer reach the new book's pages (the importer drops work for an older book), and a key found while a page loads is applied when that page is done. Unit, chapter and lesson groups are no longer matched to printed page numbers (only 'Page', 'Seite', 'S.' groups are). The source label text moved to `AnswerReconciler.sourceLabel` and is checked (AC3); 'confirmed by a second method' is shown only after real agreement. Review 6: 'S 10' and 'p 10' without a dot are page groups (OCR often drops the dot).
 
 ### PP-034 — Solve crosswords from the printed word list (D4)
 - **Status:** doing
@@ -301,7 +301,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [x] Agreement = trusted; disagreement or low score = marked
 - **Tests:** Sources/PagePalsChecks/main.swift (AC2)
 - **Commits:** f7595a9, 89b8ede
-- **Notes:** Old id D10. Round 2: `AnswerReconciler.merge` compares a calculated key with the answer-page key (agree: confidence 0.95; differ: no key, left to a grown-up). Model results are not compared yet because no model runs. Review 4: A key with a score below 0.5 that a grown-up did not type is marked for the grown-up (`AnswerReconciler.needsGrownUp`) and labelled 'unsure'; checked. Model results still do not run (AC1).
+- **Notes:** Old id D10. Round 2: `AnswerReconciler.merge` compares a calculated key with the answer-page key (agree: confidence 0.95; differ: no key, left to a grown-up). Model results are not compared yet because no model runs. Review 4: A key with a score below 0.5 that a grown-up did not type is marked for the grown-up (`AnswerReconciler.needsGrownUp`) and labelled 'unsure'; checked. Model results still do not run (AC1). Review 6: A fill-in key that misses a field is marked for the grown-up.
 
 ### PP-060 — Work completely offline (H1)
 - **Status:** doing
@@ -343,7 +343,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Rename and delete a book
   - [ ] Pack has a version number and loads older versions
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 88f2514, 89b8ede
+- **Commits:** 88f2514, 89b8ede, a4c4132
 - **Notes:** Old id A4. Round 1 (M3): `LessonLibrary` saves and loads a book folder (`pack.json` + picture files, atomic write), lists, renames, deletes, refuses ids with a path, loads packs without version or language and refuses newer ones. Not yet used by the app. Review 4: An empty title is refused when renaming. Review 5: an empty title has its own error (`emptyTitle`).
 
 ### PP-005 — See import progress, cancel and resume (A5)
@@ -395,8 +395,8 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Words in the header ('Draw lines', 'Circle', 'Match', 'Colour', 'Crossword', 'Read and choose') choose the type
   - [ ] Unknown tasks become open tasks
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 88f2514, 89b8ede
-- **Notes:** Old id B7. Partly done. Round 1 (M3): `TaskTypeClassifier` chooses the kind from header words (English, German; whole words) and shapes. `TaskBuilder` does not use it yet because the other kinds have no page builders or players. Review 4: Colouring and drawing words beat empty circles. Review 5: numbering and writing phrases come before the open-task words, and only colouring or drawing verbs ('Colour', 'Draw', 'Male') beat empty circles; 'Read, say and number' is numbering.
+- **Commits:** 88f2514, 89b8ede, a4c4132
+- **Notes:** Old id B7. Partly done. Round 1 (M3): `TaskTypeClassifier` chooses the kind from header words (English, German; whole words) and shapes. `TaskBuilder` does not use it yet because the other kinds have no page builders or players. Review 4: Colouring and drawing words beat empty circles. Review 5: numbering and writing phrases come before the open-task words, and only colouring or drawing verbs ('Colour', 'Draw', 'Male') beat empty circles; 'Read, say and number' is numbering. Review 6: A colouring or drawing verb makes empty circles part of the picture unless the header asks for numbering; writing words with answer bars give fill-in even when circles are found; 'Number and colour' is numbering; 'Circle the correct …' is choosing. A plain 'Circle …' waits for the circling kind (PP-022).
 
 ### PP-014 — Link each picture to its word or sentence (B8)
 - **Status:** todo
@@ -623,8 +623,8 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Works offline with the voices installed on the Mac (English, German)
   - [ ] Speed control
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 7460a04
-- **Notes:** Old id C12. Round 1 (M5): `SpeechSettings` (voice language per book, speed) and `Speaker` (system voices, offline). No tap-to-hear in the player yet; never run. Review 5: when no voice for the book language is installed, nothing is read (instead of the English voice reading German or Russian).
+- **Commits:** 7460a04, a4c4132
+- **Notes:** Old id C12. Round 1 (M5): `SpeechSettings` (voice language per book, speed) and `Speaker` (system voices, offline). No tap-to-hear in the player yet; never run. Review 5: when no voice for the book language is installed, nothing is read (instead of the English voice reading German or Russian). Review 6: If the exact voice (en-GB) is missing, another voice of the same language (en-US) is used.
 
 ### PP-042 — See where an answer came from (D12)
 - **Status:** doing
@@ -633,8 +633,8 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
 - **Description:** The app finds correct answers by itself, with rules first, then on-device models. No internet, no cloud API.
 - **Acceptance criteria:**
   - [ ] Source label on the task card and in the review editor
-- **Tests:** 
-- **Commits:** f7595a9
+- **Tests:** Sources/PagePalsChecks/main.swift (label text)
+- **Commits:** f7595a9, 89b8ede, a4c4132
 - **Notes:** Old id D12. Partly done. Round 2: the source (calculated, answer page, typed by a grown-up, on-device model) is shown on each task in the Import tab; the review editor (G2, PP-054) does not exist yet. Review 4/5: the label text is `AnswerReconciler.sourceLabel` (checked); 'confirmed by a second method' only after real agreement; an unsure answer says '(unsure, please check)' and is drawn orange instead of with the green seal.
 
 ### PP-046 — Grow a Pal with stars (F1)
@@ -715,8 +715,8 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Assign a picture to a word
   - [ ] Undo and redo
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
-- **Commits:** 7460a04
-- **Notes:** Old id G2. Round 1 (M5): `EditHistory` (undo/redo) and `TaskEdit` (move a box, change type, prompt, answers, picture). The editor view is not built. Review 5: clearing the last answer removes the key, so the task goes back to the grown-up.
+- **Commits:** 7460a04, a4c4132
+- **Notes:** Old id G2. Round 1 (M5): `EditHistory` (undo/redo) and `TaskEdit` (move a box, change type, prompt, answers, picture). The editor view is not built. Review 5: clearing the last answer removes the key, so the task goes back to the grown-up. Review 6: Typing the same answer keeps the key's source; clearing one of several answers keeps the task marked for the grown-up (a fill-in key must cover every field).
 
 ### PP-055 — Open the grown-up area safely (G3)
 - **Status:** doing

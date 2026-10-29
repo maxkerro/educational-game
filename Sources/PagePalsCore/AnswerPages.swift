@@ -69,7 +69,8 @@ public enum AnswerPages {
         return hasHeading && parse(lines).count >= 3
     }
 
-    private static let groupStart = #"(?:pages?|pp?\.|seiten?|s\.|unit|lektion|kapitel|lesson|chapter|ch\.|module|topic|übung|uebung)"#
+    // "S 10" and "p 10" also count: OCR often drops the dot
+    private static let groupStart = #"(?:pages?|pp?\.?|seiten?|s\.?|unit|lektion|kapitel|lesson|chapter|ch\.|module|topic|übung|uebung)"#
 
     /// Lines like "3. 4, 5, 6" or "Task 3: a b c" become entries; a line "Page 10" (or "Seite", "Unit",
     /// "Lektion", "S. 10") starts a group. A heading that cannot be read ("Pages 12-13", "Seite 10/11")
@@ -87,7 +88,7 @@ public enum AnswerPages {
               let groupRegex = try? NSRegularExpression(
                 pattern: "^\\s*" + groupStart + #"\s*(\d{1,3})\s*[:.]?\s*$"#, options: [.caseInsensitive]),
               let pageStart = try? NSRegularExpression(
-                pattern: #"^\s*(?:pages?|pp?\.|seiten?|s\.)"#, options: [.caseInsensitive]),
+                pattern: #"^\s*(?:pages?|pp?\.?|seiten?|s\.?)\s*\d"#, options: [.caseInsensitive]),
               let headingLike = try? NSRegularExpression(
                 pattern: "^\\s*" + groupStart + #"\s*\d"#, options: [.caseInsensitive]),
               // any other short "word number" line ("Teil 3", "Part 2-3"), except task numbers ("Aufgabe 3")

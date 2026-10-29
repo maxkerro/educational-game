@@ -37,10 +37,22 @@ public enum TaskEvaluator {
     }
 
     /// Same text after normalising; numbers match whatever the spelling ("4", "four", "vier").
+    /// "2,50 €" and "2.50 €" are the same too: the decimal separator depends on the book's language.
     public static func sameText(_ given: String, _ expected: String) -> Bool {
         if normalize(given) == normalize(expected) { return true }
+        if decimalForm(given) == decimalForm(expected) && given.contains(where: { $0.isNumber }) { return true }
         if let a = NumberWords.value(given), let b = NumberWords.value(expected) { return a == b }
         return false
+    }
+
+    /// A digit, a comma or point, then a digit: the separator is made a point. Other commas stay.
+    static func decimalForm(_ s: String) -> String {
+        let c = Array(normalize(s))
+        var out = ""
+        for (i, ch) in c.enumerated() {
+            if ch == ",", i > 0, i + 1 < c.count, c[i - 1].isNumber, c[i + 1].isNumber { out.append(".") } else { out.append(ch) }
+        }
+        return out
     }
 
     public static func evaluate(task: PlayTask, response: TaskResponse) -> EvaluationResult {

@@ -11,7 +11,11 @@ final class Speaker {
     /// the default voice would read German or Russian text with English sounds.
     @discardableResult
     func say(_ text: String, language: BookLanguage, settings: SpeechSettings = SpeechSettings()) -> Bool {
-        guard let voice = AVSpeechSynthesisVoice(language: settings.voiceLanguage(for: language)) else { return false }
+        let wanted = settings.voiceLanguage(for: language)
+        let prefix = String(wanted.prefix(2))
+        // exact locale first ("en-GB"), then any voice of the same language ("en-US")
+        guard let voice = AVSpeechSynthesisVoice(language: wanted)
+                ?? AVSpeechSynthesisVoice.speechVoices().first(where: { $0.language.hasPrefix(prefix) }) else { return false }
         synthesizer.stopSpeaking(at: .immediate)
         let utterance = AVSpeechUtterance(string: text)
         utterance.voice = voice

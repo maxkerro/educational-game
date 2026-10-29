@@ -889,5 +889,34 @@ do {
     check(titleError == .emptyTitle, "PP-004: an empty title has its own error")
 }
 
+// Review 6 fixes
+do {
+    check(TaskTypeClassifier.classify(header: "Colour the balloons and write the colours.", shapes: .init(emptyCircles: 4)) == .openTask, "PP-013: colouring with writing and no bars stays an open task")
+    check(TaskTypeClassifier.classify(header: "Number and colour the pictures.", shapes: .init(emptyCircles: 5)) == .numberInOrder, "PP-013: 'number and colour' is numbering")
+    check(TaskTypeClassifier.classify(header: "Write the words.", shapes: .init(emptyCircles: 2, answerBars: 4)) == .fillIn, "PP-013: a writing task with bars is fill-in even with circles")
+    check(TaskTypeClassifier.classify(header: "Write the numbers.", shapes: .init(emptyCircles: 6)) == .numberInOrder, "PP-013: numbers written into circles")
+    check(TaskTypeClassifier.kind(forHeader: "Circle the correct word.") == .multipleChoice, "PP-013: 'circle the correct' is choosing")
+
+    let two = [TaskItem(id: "a"), TaskItem(id: "b")]
+    var partial = PlayTask(id: "p", kind: .fillIn, prompt: "1. Write.", items: two, key: AnswerKey(text: ["a": "4", "b": "5"]), confidence: 0.8, keySource: .calculated)
+    TaskEdit.setAnswer(itemId: "a", text: "").apply(to: &partial)
+    check(partial.key?.text == ["b": "5"] && AnswerReconciler.needsGrownUp(partial), "PP-054: clearing one of two answers keeps the task marked")
+    var same = PlayTask(id: "s", kind: .fillIn, prompt: "1. Write.", items: two, key: AnswerKey(text: ["a": "4", "b": "5"]), confidence: 0.8, keySource: .calculated)
+    TaskEdit.setAnswer(itemId: "a", text: " 4 ").apply(to: &same)
+    check(same.keySource == .calculated && same.confidence == 0.8, "PP-054: typing the same answer keeps its source")
+    var ordered = PlayTask(id: "o", kind: .numberInOrder, prompt: "1. Number.", items: two, key: AnswerKey(order: ["a": 1, "b": 2]), confidence: 0.9, keySource: .answerPage)
+    TaskEdit.setAnswer(itemId: "a", text: "").apply(to: &ordered)
+    check(ordered.keySource == .answerPage, "PP-054: an empty text on an ordering task changes nothing")
+
+    check(TaskEvaluator.sameText("2.50 \u{20AC}", "2,50 \u{20AC}") && TaskEvaluator.sameText("\u{20AC} 2,50", "\u{20AC} 2.50"), "PP-032: either decimal separator is accepted")
+    check(!TaskEvaluator.sameText("2.50 \u{20AC}", "2,60 \u{20AC}") && !TaskEvaluator.sameText("cat, dog", "cat. dog"), "PP-032: different numbers and plain commas still differ")
+    let moneyTask = PlayTask(id: "m", kind: .fillIn, prompt: "1. Add.", items: [TaskItem(id: "x")], key: AnswerKey(text: ["x": "2,50 \u{20AC}"]))
+    check(TaskEvaluator.evaluate(task: moneyTask, response: AnswerKey(text: ["x": "2.50 \u{20AC}"])).isComplete, "PP-032: a child typing a point gets a comma answer right")
+
+    let sKey = AnswerPages.parse([textLine("S 10", 0.1, 0.10), textLine("1. 4, 5, 6", 0.1, 0.15)])
+    check(sKey.first?.group == 10 && sKey.first?.groupIsPage == true, "PP-033: 'S 10' without a dot is a page group")
+    check(AnswerPages.parse([textLine("Set 10", 0.1, 0.10), textLine("1. 4", 0.1, 0.15)]).first?.groupIsPage != true || AnswerPages.parse([textLine("Set 10", 0.1, 0.10), textLine("1. 4", 0.1, 0.15)]).first?.group == AnswerPages.unknownGroup, "PP-033: 'Set 10' is not a page")
+}
+
 print(failures == 0 ? "\nAll checks passed." : "\n\(failures) check(s) failed.")
 exit(failures == 0 ? 0 : 1)

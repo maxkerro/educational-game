@@ -11,9 +11,11 @@ public enum AnswerReconciler {
     /// A key found by a method with a lower score than this is marked for the grown-up.
     public static let lowScore = 0.5
 
-    /// No key, or a key with a low score that a grown-up has not typed: the task is shown to the grown-up.
+    /// No key, a fill-in key that misses a field, or a key with a low score that a grown-up has not typed:
+    /// the task is shown to the grown-up.
     public static func needsGrownUp(_ task: PlayTask) -> Bool {
-        guard task.key != nil else { return true }
+        guard let key = task.key else { return true }
+        if task.kind == .fillIn && task.items.contains(where: { key.text[$0.id] == nil }) { return true }
         return task.keySource != .parent && task.confidence < lowScore
     }
 
@@ -36,7 +38,7 @@ public enum AnswerReconciler {
     /// "4", "four" and "vier" are the same answer; otherwise answers are compared without case and spaces.
     public static func sameAnswer(_ a: String, _ b: String) -> Bool {
         if let x = NumberWords.value(a), let y = NumberWords.value(b) { return x == y }
-        return a.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == b.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return TaskEvaluator.sameText(a, b)
     }
 
     public static func sameKey(_ a: AnswerKey, _ b: AnswerKey) -> Bool {
