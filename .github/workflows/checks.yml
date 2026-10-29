@@ -29,7 +29,7 @@ jobs:
         if: steps.build.outcome == 'success'
         run: |
           set -o pipefail
-          swift run PagePalsChecks 2>&1 | tee checks.log
+          swift run -c release PagePalsChecks 2>&1 | tee checks.log
         continue-on-error: true
         id: checks
 
