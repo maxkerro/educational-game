@@ -18,10 +18,10 @@ public enum PageNumbers {
     }
 
     /// The printed number of the page that holds something at horizontal position `x`. A single page
-    /// (aspect up to 1.2) needs exactly one distinct number in the margin; a two-page spread needs exactly
+    /// (narrower than `PageSplit.spreadAspect`) needs exactly one distinct number in the margin; a two-page spread needs exactly
     /// one distinct number in the half that contains `x`. Anything unclear gives nil.
     public static func number(atX x: Double, lines: [PageText], pageAspect: Double) -> Int? {
-        let isSpread = pageAspect > 1.2
+        let isSpread = PageSplit.isSpread(aspect: pageAspect)
         let candidates = find(lines).filter { found in
             isSpread ? (found.x < 0.5) == (x < 0.5) : true
         }
@@ -53,7 +53,7 @@ public enum BookKeys {
             var bare = task
             bare.key = nil
             bare.keySource = nil
-            let fromKey = AnswerPages.apply(entries, to: bare, group: page)
+            let fromKey = AnswerPages.apply(entries, to: bare, group: page, pageGroupsOnly: true)
             return AnswerReconciler.merge(task, fromKey)
         }
     }

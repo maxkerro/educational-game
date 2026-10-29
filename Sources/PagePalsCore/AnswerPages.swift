@@ -11,10 +11,14 @@ public enum AnswerPages {
         public let answers: [String]
         /// The page / unit / Seite number of the group heading above the entry, if the key has such headings.
         public let group: Int?
-        public init(task: Int, answers: [String], group: Int? = nil) {
+        /// True when the group heading names a page ("Page 10", "Seite 10", "S. 10"), false for a unit,
+        /// chapter, lesson, module or exercise. Only page groups can be matched to a printed page number.
+        public let groupIsPage: Bool
+        public init(task: Int, answers: [String], group: Int? = nil, groupIsPage: Bool = true) {
             self.task = task
             self.answers = answers
             self.group = group
+            self.groupIsPage = groupIsPage
         }
     }
 
@@ -30,6 +34,7 @@ public enum AnswerPages {
     ]
     private static let fillerWords: Set<String> = ["answer", "zu", "to", "for", "of", "der", "des"]
     private static let groupWords: Set<String> = ["page", "pages", "p", "seite", "seiten", "s", "unit", "lektion", "kapitel", "lesson"]
+    private static let pageWords: Set<String> = ["page", "pages", "p", "seite", "seiten", "s"]
 
     private static func tokens(_ text: String) -> [String] {
         text.precomposedStringWithCanonicalMapping.lowercased()
@@ -39,12 +44,12 @@ public enum AnswerPages {
 
     /// A key heading that names its page or unit ("Lösungen zu Seite 10", "Answers Unit 1"): that number,
     /// or `unknownGroup` when the page part cannot be read ("Answers Seite 10/11"). nil for other lines.
-    private static func keyHeadingGroup(_ text: String) -> Int? {
+    private static func keyHeadingGroup(_ text: String) -> (group: Int, isPage: Bool)? {
         let words = tokens(text)
         guard let first = words.first, keyWords.contains(first) || fillerWords.contains(first),
               let i = words.firstIndex(where: { groupWords.contains($0) }),
               i + 1 < words.count, let n = Int(words[i + 1]) else { return nil }
-        return i + 2 == words.count ? n : unknownGroup
+        return (i + 2 == words.count ? n : unknownGroup, pageWords.contains(words[i]))
     }
 
     private static func isKeyHeading(_ text: String, isTopmost: Bool) -> Bool {
@@ -81,6 +86,8 @@ public enum AnswerPages {
                 pattern: #"^\s*(?:task\s+|aufgabe\s+)?(\d{1,2})\s*[.):]\s*(.+)$"#, options: [.caseInsensitive]),
               let groupRegex = try? NSRegularExpression(
                 pattern: "^\\s*" + groupStart + #"\s*(\d{1,3})\s*[:.]?\s*$"#, options: [.caseInsensitive]),
+              let pageStart = try? NSRegularExpression(
+                pattern: #"^\s*(?:pages?|pp?\.|seiten?|s\.)"#, options: [.caseInsensitive]),
               let headingLike = try? NSRegularExpression(
                 pattern: "^\\s*" + groupStart + #"\s*\d"#, options: [.caseInsensitive]),
               // any other short "word number" line ("Teil 3", "Part 2-3"), except task numbers ("Aufgabe 3")
@@ -89,18 +96,18 @@ public enum AnswerPages {
         else { return [] }
 
         var entryLines: [(x: Double, width: Double, y: Double, task: Int, answers: [String])] = []
-        var headings: [(x: Double, y: Double, group: Int)] = []
+        var headings: [(x: Double, y: Double, group: Int, isPage: Bool)] = []
         for line in lines {
             let text = line.text.precomposedStringWithCanonicalMapping
             let range = NSRange(text.startIndex..., in: text)
             if let heading = keyHeadingGroup(text) {
-                headings.append((line.box.x, line.box.y, heading))
+                headings.append((line.box.x, line.box.y, heading.group, heading.isPage))
             } else if let g = groupRegex.firstMatch(in: text, options: [], range: range),
                let r = Range(g.range(at: 1), in: text), let n = Int(text[r]) {
-                headings.append((line.box.x, line.box.y, n))
+                headings.append((line.box.x, line.box.y, n, pageStart.firstMatch(in: text, options: [], range: range) != nil))
             } else if headingLike.firstMatch(in: text, options: [], range: range) != nil
                         || shortHeading.firstMatch(in: text, options: [], range: range) != nil {
-                headings.append((line.box.x, line.box.y, unknownGroup))
+                headings.append((line.box.x, line.box.y, unknownGroup, false))
             } else if let match = entryRegex.firstMatch(in: text, options: [], range: range),
                       let numberRange = Range(match.range(at: 1), in: text),
                       let restRange = Range(match.range(at: 2), in: text),
@@ -140,14 +147,18 @@ public enum AnswerPages {
                 let nearest = columns.indices.min { distance(heading.x, to: columns[$0]) < distance(heading.x, to: columns[$1]) } ?? 0
                 return nearest == c
             }
-            enum Row { case heading(Int), entry(Int) }
-            var rows: [(y: Double, row: Row)] = mine.map { ($0.y, Row.heading($0.group)) }
+            enum Row { case heading(Int, Bool), entry(Int) }
+            var rows: [(y: Double, row: Row)] = mine.map { ($0.y, Row.heading($0.group, $0.isPage)) }
             rows += column.map { (entryLines[$0].y, Row.entry($0)) }
             var group: Int?
+            var isPage = true
             for item in rows.sorted(by: { $0.y < $1.y }) {
                 switch item.row {
-                case .heading(let g): group = g
-                case .entry(let i): entries.append(Entry(task: entryLines[i].task, answers: entryLines[i].answers, group: group))
+                case .heading(let g, let p):
+                    group = g
+                    isPage = p
+                case .entry(let i):
+                    entries.append(Entry(task: entryLines[i].task, answers: entryLines[i].answers, group: group, groupIsPage: group == nil || isPage))
                 }
             }
         }
@@ -163,12 +174,13 @@ public enum AnswerPages {
     /// Gives a task its key from the answer page when exactly one entry fits and it has one answer per
     /// item, in the order of `task.items` (reading order). `group` is the printed page (or unit) number of
     /// the task; it is needed when the key has page headings. Tasks that already have a key are left alone.
-    public static func apply(_ entries: [Entry], to task: PlayTask, group: Int? = nil) -> PlayTask {
+    /// With `pageGroupsOnly`, `group` is a printed page number and unit / chapter groups are never matched to it.
+    public static func apply(_ entries: [Entry], to task: PlayTask, group: Int? = nil, pageGroupsOnly: Bool = false) -> PlayTask {
         guard task.key == nil, let number = taskNumber(of: task.prompt), !task.items.isEmpty else { return task }
         let grouped = entries.contains { $0.group != nil }
         if grouped && (group == nil || group == unknownGroup) { return task }   // do not guess the page
         if group != nil && !grouped { return task }          // a key without page headings cannot be placed on a page
-        let candidates = entries.filter { $0.task == number && (!grouped || $0.group == group) }
+        let candidates = entries.filter { $0.task == number && (!grouped || ($0.group == group && (!pageGroupsOnly || $0.groupIsPage))) }
         guard candidates.count == 1, let entry = candidates.first,
               entry.answers.count == task.items.count else { return task }
 

@@ -39,8 +39,7 @@ public struct ImportProgress: Codable, Equatable, Sendable {
         guard let data = try? Data(contentsOf: url),
               let saved = try? JSONDecoder().decode(ImportProgress.self, from: data),
               saved.pageCount == pageCount else { return ImportProgress(pageCount: pageCount) }
-        var state = saved
-        state.cancelled = false
-        return state
+        // rebuilt through init, so page numbers outside the book are dropped and the cancel is cleared
+        return ImportProgress(pageCount: pageCount, finished: saved.finished)
     }
 }

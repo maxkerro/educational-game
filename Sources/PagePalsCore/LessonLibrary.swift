@@ -86,8 +86,10 @@ public struct LessonLibrary: Sendable {
     }
 
     public func rename(id: String, to title: String) throws {
+        let clean = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty else { throw LibraryError.badName }
         var pack = try load(id: id)
-        pack.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        pack.title = clean
         try save(pack, id: id)
     }
 

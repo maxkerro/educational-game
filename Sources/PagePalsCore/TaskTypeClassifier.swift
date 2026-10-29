@@ -44,6 +44,8 @@ public enum TaskTypeClassifier {
     public static func classify(header: String, shapes: Shapes = Shapes()) -> TaskKind {
         let byWords = kind(forHeader: header)
         if let k = byWords, structural.contains(k) { return k }
+        // "Colour the balloons": circles in a colouring picture are not answer circles
+        if byWords == .openTask && shapes.tickCircles < 2 && shapes.answerBars == 0 { return .openTask }
         if shapes.tickCircles >= 2 { return .trueFalse }
         if shapes.emptyCircles >= 1 { return .numberInOrder }
         if shapes.answerBars >= 1 { return .fillIn }

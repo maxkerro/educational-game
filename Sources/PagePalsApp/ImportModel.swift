@@ -31,6 +31,10 @@ final class ImportModel: ObservableObject {
     private var pageText: [Int: [RecognizedLine]] = [:]
     private var bookKey: [AnswerPages.Entry] = []
     private var scanTask: Task<Void, Never>?
+    /// Raised when another book is opened; work started for an older book must not write its results.
+    private var generation = 0
+    /// The book key was found while a page was loading: show the page again when it is done.
+    private var refreshAfterShow = false
 
     private var book: PDFBook?
     private var bookName = "book"
@@ -48,6 +52,9 @@ final class ImportModel: ObservableObject {
             bookName = url.lastPathComponent
             keys = KeyStore.load(book: bookName)
             scanTask?.cancel()
+            generation += 1
+            isWorking = false
+            refreshAfterShow = false
             pageText = [:]
             bookKey = []
             keyStatus = ""
@@ -78,6 +85,7 @@ final class ImportModel: ObservableObject {
         status = "Reading page \(index + 1) ..."
         let cachedLines = pageText[index]
         let entries = bookKey
+        let gen = generation
 
         Task {
             let outcome = await Task.detached(priority: .userInitiated) { () -> Result<(CGImage, [RecognizedLine], [PageRegion], [PageRect], [PageRect], [PageRect]), Error> in
@@ -93,6 +101,9 @@ final class ImportModel: ObservableObject {
                     return (rendered, found, regions, circles, bars, ticks)
                 }
             }.value
+
+            // Another book was opened meanwhile: its own `show` owns the screen and `isWorking`.
+            guard gen == generation else { return }
 
             switch outcome {
             case .success(let (rendered, found, foundRegions, foundCircles, foundBars, foundTicks)):
@@ -131,6 +142,10 @@ final class ImportModel: ObservableObject {
                 status = "Could not read page \(index + 1): \(error.localizedDescription)"
             }
             isWorking = false
+            if refreshAfterShow {
+                refreshAfterShow = false
+                show(page: pageIndex)
+            }
         }
     }
 
@@ -148,11 +163,11 @@ final class ImportModel: ObservableObject {
     /// Pages already read are not read again. The current page is updated when the key is found.
     private func scanForAnswerPages(_ opened: PDFBook) {
         let total = opened.pageCount
+        let gen = generation
         scanTask = Task { [weak self] in
             var pages: [[PageText]] = []
             for index in 0..<total {
-                if Task.isCancelled { return }
-                guard let self else { return }
+                guard !Task.isCancelled, let self, self.generation == gen else { return }
                 self.keyStatus = "Looking for answer pages: \(index + 1) of \(total) ..."
                 var lines = self.pageText[index]
                 if lines == nil {
@@ -160,17 +175,20 @@ final class ImportModel: ObservableObject {
                         guard let image = try? opened.renderPage(index) else { return nil }
                         return try? PageOCR.recognize(image)
                     }.value
+                    // the book may have changed while this page was read
+                    guard !Task.isCancelled, self.generation == gen else { return }
                     if let read = lines { self.pageText[index] = read }
                 }
                 pages.append((lines ?? []).map { PageText(text: $0.text, box: $0.box) })
             }
-            guard !Task.isCancelled, let self else { return }
+            guard !Task.isCancelled, let self, self.generation == gen else { return }
             let entries = BookKeys.entries(pages: pages)
             self.bookKey = entries
             self.keyStatus = entries.isEmpty
                 ? "No answer pages found in this book."
-                : "Answer pages found: \(entries.count) answer lines. They are used on the next page you open."
-            if !entries.isEmpty, !self.isWorking, self.book != nil { self.show(page: self.pageIndex) }
+                : "Answer pages found: \(entries.count) answer lines."
+            guard !entries.isEmpty, self.book != nil else { return }
+            if self.isWorking { self.refreshAfterShow = true } else { self.show(page: self.pageIndex) }
         }
     }
 

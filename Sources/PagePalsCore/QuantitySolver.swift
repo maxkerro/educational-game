@@ -146,6 +146,8 @@ public enum QuantitySolver {
                     while j < c.count, c[j].isASCII, c[j].isNumber { digits.append(c[j]); decimals += 1; j += 1 }
                 }
                 guard digits.count <= 9, decimals <= 3 else { return nil }
+                // "1.000 m" is one thousand in German and one in English: do not guess
+                if !comma && decimals == 3 { return nil }
                 pieces.append(.number(digits: digits, decimals: decimals, comma: comma))
                 i = j
             } else if ch.isLetter || ch == "\u{20AC}" {
@@ -202,13 +204,14 @@ public enum QuantitySolver {
     private static func format(_ amount: Int, _ fam: Family, terms: [[Part]]) -> String? {
         let all = terms.flatMap { $0 }
 
-        // Money with decimals or whole euros: "3,70 €"
-        if fam == .money, all.allSatisfy({ $0.info.factor == 100 }) {
+        // Money with euros (also mixed with cents): "3,70 €"
+        if fam == .money, let sign = all.first(where: { $0.info.factor == 100 }) {
             let anyDecimals = all.contains { $0.decimals > 0 }
-            let sign = all.first { $0.info.factor == 100 }!
             let euros = amount / 100
             let cents = amount % 100
-            let separator = all.contains(where: { $0.commaSeparator }) ? "," : "."
+            let pointOnly = all.contains { $0.decimals > 0 && !$0.commaSeparator } && !all.contains { $0.commaSeparator }
+            let separator = pointOnly ? "." : ","
+
             if !anyDecimals && cents == 0 { return sign.prefixUnit ? "\(sign.printed) \(euros)" : "\(euros) \(sign.printed)" }
             guard cents >= 0 else { return nil }
             let number = "\(euros)\(separator)" + (cents < 10 ? "0\(cents)" : "\(cents)")

@@ -8,6 +8,30 @@ public enum AnswerReconciler {
     public static let agreed = 0.95
     /// Confidence of a task whose methods disagree.
     public static let disputed = 0.3
+    /// A key found by a method with a lower score than this is marked for the grown-up.
+    public static let lowScore = 0.5
+
+    /// No key, or a key with a low score that a grown-up has not typed: the task is shown to the grown-up.
+    public static func needsGrownUp(_ task: PlayTask) -> Bool {
+        guard task.key != nil else { return true }
+        return task.keySource != .parent && task.confidence < lowScore
+    }
+
+    /// Where the answers of a task came from, for the grown-up: "Answers: answer page of the book".
+    public static func sourceLabel(_ task: PlayTask) -> String? {
+        guard task.key != nil, let source = task.keySource else { return nil }
+        let name: String
+        switch source {
+        case .calculated: name = "calculated"
+        case .answerPage: name = "answer page of the book"
+        case .parent: name = "typed by a grown-up"
+        case .model: name = "on-device model"
+        }
+        var label = "Answers: \(name)"
+        if task.confirmed == true && source != .parent { label += " (confirmed by a second method)" }
+        if needsGrownUp(task) { label += " (unsure, please check)" }
+        return label
+    }
 
     /// "4", "four" and "vier" are the same answer; otherwise answers are compared without case and spaces.
     public static func sameAnswer(_ a: String, _ b: String) -> Bool {
@@ -43,9 +67,11 @@ public enum AnswerReconciler {
             var result = first
             if sameKey(a, b) {
                 result.confidence = max(first.confidence, agreed)
+                result.confirmed = true
             } else {
                 result.key = nil
                 result.keySource = nil
+                result.confirmed = nil
                 result.confidence = min(first.confidence, disputed)
             }
             return result

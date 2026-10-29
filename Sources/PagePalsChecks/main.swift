@@ -508,12 +508,13 @@ do {
 
 // H1: no network code in the app (the app must work offline and keep everything on the Mac)
 do {
-    let forbidden = ["URLSession", "URLRequest", "NWConnection", "import Network", "CFSocket", "WKWebView"]
+    let forbidden = ["URLSession", "URLRequest", "NWConnection", "NSURLConnection", "import Network", "CFSocket", "WKWebView", "http://", "https://"]
     var offenders: [String] = []
     var scanned = 0
     for folder in ["Sources/PagePalsCore", "Sources/PagePalsImport", "Sources/PagePalsApp"] {
-        guard let names = try? FileManager.default.contentsOfDirectory(atPath: folder) else { continue }
-        for name in names where name.hasSuffix(".swift") {
+        // subfolders too
+        guard let walker = FileManager.default.enumerator(atPath: folder) else { continue }
+        for case let name as String in walker where name.hasSuffix(".swift") {
             guard let text = try? String(contentsOfFile: folder + "/" + name, encoding: .utf8) else { continue }
             scanned += 1
             for word in forbidden where text.contains(word) { offenders.append(name + ": " + word) }
@@ -604,8 +605,11 @@ do {
 
 do {
     let solution = ["a", "b", "c"]
-    var board = OrderingBoard.start(solution: solution)
-    check(board.itemIds == ["b", "c", "a"] && board.itemIds != solution, "PP-025: board does not start solved")
+    var board = OrderingBoard(itemIds: ["b", "c", "a"])
+    let starts = (1...60).map { OrderingBoard.start(solution: ["a", "b", "c", "d"], seed: UInt64($0)).itemIds }
+    check(starts.allSatisfy { $0 != ["a", "b", "c", "d"] && $0.sorted() == ["a", "b", "c", "d"] }, "PP-025: a shuffled board is never solved at the start")
+    check(Set(starts.map { $0.joined() }).count >= 5, "PP-025: boards start in different ways")
+    check(OrderingBoard.start(solution: solution, seed: 7) == OrderingBoard.start(solution: solution, seed: 7), "PP-025: the same seed gives the same board")
     let task = PlayTask(id: "o", kind: .numberInOrder, prompt: "Order", items: solution.map { TaskItem(id: $0) }, key: OrderingBoard.key(solution: solution))
     check(!TaskEvaluator.evaluate(task: task, response: board.response()).isComplete, "PP-025: start is not complete")
     board.move(from: 2, to: 5)
@@ -800,6 +804,66 @@ do {
     check(recent.paths.count == 5 && recent.paths.first == "/books/c.pdf" && !recent.paths.contains("/books/a.pdf"), "PP-002: last 5 books, newest first")
     check(RecentBooks.isPDF("Book.PDF") && !RecentBooks.isPDF("photo.png"), "PP-002: only PDFs are dropped")
     check(SpeechSettings().voiceLanguage(for: .german) == "de-DE" && SpeechSettings(speed: 9).utteranceRate == 0.75 && SpeechSettings(speed: 1).utteranceRate == 0.5, "PP-028: voice language and speed")
+}
+
+// Review 4 fixes
+do {
+    // German thousands separator and mixed money
+    check(QuantitySolver.solve("1.000 m + 500 m =") == nil && QuantitySolver.solve("1.000 g + 250 g =") == nil, "units: '1.000' is not guessed (thousand in German, one in English)")
+    check(QuantitySolver.solve("1,250 kg + 250 g =") == "1500 g", "units: German decimal comma with three digits")
+    check(QuantitySolver.solve("2 \u{20AC} + 50 ct =") == "2,50 \u{20AC}", "money: euros and cents are answered in euros")
+    check(QuantitySolver.solve("30 ct + 20 ct =") == "50 ct", "money: cents only stay cents")
+
+    // line matching from either end
+    let word = LineMatching.Target(id: "A", region: PageRect(x: 0.6, y: 0.1, width: 0.1, height: 0.1))
+    let picS = LineMatching.Target(id: "s", region: PageRect(x: 0.1, y: 0.1, width: 0.1, height: 0.1))
+    let picT = LineMatching.Target(id: "t", region: PageRect(x: 0.1, y: 0.4, width: 0.1, height: 0.1))
+    let pairKey = AnswerKey(pairs: ["s": "A"])
+    check(LineMatching.drop(from: "A", atX: 0.15, y: 0.45, targets: [word, picS, picT], key: pairKey) == .wrong("t"), "PP-020: a wrong line drawn from the other end is wrong")
+    check(LineMatching.drop(from: "A", atX: 0.15, y: 0.15, targets: [word, picS, picT], key: pairKey) == .snapped("s"), "PP-020: a right line drawn from the other end snaps")
+    check(LineMatching.drop(from: "t", atX: 0.65, y: 0.15, targets: [word, picS, picT], key: pairKey) == .wrong("A"), "PP-020: a line from something not in the key is wrong")
+
+    // low score, label, confirmation
+    var unsure = PlayTask(id: "u", kind: .fillIn, prompt: "1. Write.", items: [TaskItem(id: "x")], key: AnswerKey(text: ["x": "4"]), confidence: 0.3, keySource: .model)
+    check(AnswerReconciler.needsGrownUp(unsure), "PP-040: a low score is marked for the grown-up")
+    check(AnswerReconciler.sourceLabel(unsure)?.contains("unsure") == true, "PP-040: the label says the answer is unsure")
+    unsure.keySource = .parent
+    check(!AnswerReconciler.needsGrownUp(unsure), "PP-040: a typed answer is never marked")
+    let fromPage = PlayTask(id: "k", kind: .fillIn, prompt: "1. Write.", items: [TaskItem(id: "x")], key: AnswerKey(text: ["x": "4"]), confidence: 0.9, keySource: .answerPage)
+    check(AnswerReconciler.sourceLabel(fromPage) == "Answers: answer page of the book", "PP-033: the grown-up sees 'answer page'")
+    check(AnswerReconciler.sourceLabel(PlayTask(id: "d", kind: .fillIn, prompt: "p", key: AnswerKey(text: ["x": "4"]), keySource: .calculated)) == "Answers: calculated", "PP-033: a default confidence does not claim a second method")
+    let both = AnswerReconciler.merge(PlayTask(id: "c", kind: .fillIn, prompt: "p", key: AnswerKey(text: ["x": "4"]), confidence: 0.8, keySource: .calculated), fromPage)
+    check(both.confirmed == true && AnswerReconciler.sourceLabel(both)?.contains("confirmed by a second method") == true, "PP-040: agreement is labelled as confirmed")
+    check(AnswerReconciler.needsGrownUp(PlayTask(id: "n", kind: .fillIn, prompt: "p")), "PP-040: no key is marked")
+
+    // unit groups are not printed pages
+    let unitItems = [TaskItem(id: "a"), TaskItem(id: "b"), TaskItem(id: "c")]
+    let unitTask = PlayTask(id: "p2-t1", kind: .numberInOrder, prompt: "1. Number.", region: PageRect(x: 0, y: 0.1, width: 1, height: 0.6), items: unitItems)
+    let unitKey = AnswerPages.parse([textLine("Unit 2", 0.1, 0.10), textLine("1. 4, 5, 6", 0.1, 0.15)])
+    check(unitKey.first?.group == 2 && unitKey.first?.groupIsPage == false, "PP-033: 'Unit 2' is a unit group")
+    check(BookKeys.apply(unitKey, to: [unitTask], lines: [textLine("2", 0.45, 0.95, width: 0.05)], pageAspect: 0.7).first?.key == nil, "PP-033: task 1 on printed page 2 does not get the key of Unit 2")
+    let pageKey = AnswerPages.parse([textLine("S. 2", 0.1, 0.10), textLine("1. 4, 5, 6", 0.1, 0.15)])
+    check(BookKeys.apply(pageKey, to: [unitTask], lines: [textLine("2", 0.45, 0.95, width: 0.05)], pageAspect: 0.7).first?.key?.order == ["a": 4, "b": 5, "c": 6], "PP-033: 'S. 2' is a page group")
+    check(AnswerPages.parse([textLine("L\u{00F6}sungen zu Seite 3", 0.1, 0.02), textLine("1. 4", 0.1, 0.1)]).first?.groupIsPage == true
+          && AnswerPages.parse([textLine("Answers Unit 1", 0.1, 0.02), textLine("1. 4", 0.1, 0.1)]).first?.groupIsPage == false, "PP-033: key headings know page from unit")
+
+    // smaller fixes
+    check(TaskTypeClassifier.classify(header: "Colour the balloons.", shapes: .init(emptyCircles: 4)) == .openTask, "PP-013: colouring words beat empty circles")
+    let tampered = FileManager.default.temporaryDirectory.appendingPathComponent("pp-tamper-" + UUID().uuidString + ".json")
+    defer { try? FileManager.default.removeItem(at: tampered) }
+    try? Data(#"{"pageCount":3,"finished":[0,7,-2],"cancelled":true}"#.utf8).write(to: tampered)
+    let loaded = ImportProgress.load(from: tampered, pageCount: 3)
+    check(loaded.finished == [0] && !loaded.cancelled && closeTo(loaded.fraction, 1.0 / 3.0), "PP-005: page numbers outside the book are dropped on load")
+    let libDir = FileManager.default.temporaryDirectory.appendingPathComponent("pp-lib2-" + UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: libDir) }
+    let lib2 = LessonLibrary(root: libDir)
+    try? lib2.save(LessonPack(title: "Keep", language: "en"), id: "b1")
+    var emptyRefused = false
+    do { try lib2.rename(id: "b1", to: "   ") } catch { emptyRefused = true }
+    check(emptyRefused && (try? lib2.load(id: "b1"))?.title == "Keep", "PP-004: an empty title is refused")
+    check(BookLanguage.detect(from: ["It was in the box.", "It was an apple."]) == .english, "PP-006: 'was', 'in' and 'an' do not count for German")
+    let minus = ColumnSums.find([textLine("68", 0.10, 0.30, width: 0.06), textLine("- 23", 0.08, 0.335, width: 0.08)])
+    check(minus.first?.expression == "68 - 23 =" && MathSolver.solve("68 - 23 =") == "45", "column sums: subtraction")
 }
 
 print(failures == 0 ? "\nAll checks passed." : "\n\(failures) check(s) failed.")

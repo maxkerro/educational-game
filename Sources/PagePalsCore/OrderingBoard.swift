@@ -6,10 +6,19 @@ public struct OrderingBoard: Equatable, Sendable {
 
     public init(itemIds: [String]) { self.itemIds = itemIds }
 
-    /// Starts with the solution turned by one place, so a board with two or more different items is never solved at the start.
-    public static func start(solution: [String]) -> OrderingBoard {
+    /// Starts shuffled (the same seed gives the same board). A board with two or more different items is
+    /// never solved at the start: a shuffle that hits the solution is turned by one place.
+    public static func start(solution: [String], seed: UInt64 = UInt64.random(in: 1...UInt64.max)) -> OrderingBoard {
         guard solution.count > 1 else { return OrderingBoard(itemIds: solution) }
-        return OrderingBoard(itemIds: Array(solution.dropFirst()) + [solution[0]])
+        var ids = solution
+        var x = seed
+        for i in stride(from: ids.count - 1, to: 0, by: -1) {
+            x = x &* 6364136223846793005 &+ 1442695040888963407
+            let j = Int((x >> 33) % UInt64(i + 1))
+            ids.swapAt(i, j)
+        }
+        if ids == solution { ids = Array(ids.dropFirst()) + [ids[0]] }
+        return OrderingBoard(itemIds: ids)
     }
 
     /// Moves one item to a new place; other items keep their order. Out-of-range indexes do nothing.

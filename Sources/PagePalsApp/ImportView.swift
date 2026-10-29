@@ -173,20 +173,12 @@ struct ImportView: View {
     /// Only tasks whose answers could not be worked out automatically are marked.
     private func needsGrownUp(_ task: PlayTask) -> Bool {
         let playable = task.kind == .numberInOrder || task.kind == .fillIn || task.kind == .trueFalse
-        return playable && task.key == nil
+        return playable && AnswerReconciler.needsGrownUp(task)
     }
 
     /// Where the answers of a task came from, so a grown-up can judge how much to trust them.
     private func sourceLabel(_ task: PlayTask) -> String? {
-        guard task.key != nil, let source = task.keySource else { return nil }
-        let name: String
-        switch source {
-        case .calculated: name = "calculated"
-        case .answerPage: name = "answer page of the book"
-        case .parent: name = "typed by a grown-up"
-        case .model: name = "on-device model"
-        }
-        return "Answers: \(name)" + (task.confidence >= AnswerReconciler.agreed && source != .parent ? " (confirmed by a second method)" : "")
+        AnswerReconciler.sourceLabel(task)
     }
 
     private func taskSummary(_ task: PlayTask) -> String {

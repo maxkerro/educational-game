@@ -92,6 +92,8 @@ public struct PlayTask: Codable, Equatable, Identifiable, Sendable {
     public var confidence: Double
     /// How `key` was found; `nil` when there is no key.
     public var keySource: KeySource?
+    /// True when a second method gave the same key (see `AnswerReconciler`).
+    public var confirmed: Bool? = nil
 
     public init(
         id: String,

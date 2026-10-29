@@ -15,8 +15,8 @@ public enum BookLanguage: String, Codable, CaseIterable, Sendable {
         }
     }
 
-    private static let germanWords: Set<String> = ["der", "die", "das", "und", "ist", "ein", "eine", "nicht", "ich", "wir", "sie", "mit", "auf", "für", "den", "dem", "zu", "von", "im", "wie", "was", "schreibe", "ergänze", "lies"]
-    private static let englishWords: Set<String> = ["the", "and", "is", "are", "a", "of", "to", "in", "what", "this", "that", "with", "write", "read", "how", "many", "you", "it", "an", "draw"]
+    private static let germanWords: Set<String> = ["der", "die", "das", "und", "ist", "ein", "eine", "nicht", "ich", "wir", "sie", "mit", "auf", "für", "den", "dem", "zu", "von", "im", "wie", "schreibe", "ergänze", "lies"]
+    private static let englishWords: Set<String> = ["the", "and", "is", "are", "a", "of", "to", "what", "this", "that", "with", "write", "read", "how", "many", "you", "it", "draw"]
 
     /// Guesses the language from text read off a few pages. Cyrillic letters mean Russian; otherwise the more frequent
     /// common words (and umlauts / ß) decide, and English wins a tie.
