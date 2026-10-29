@@ -26,6 +26,15 @@ final class ImportModel: ObservableObject {
     @Published private(set) var isWorking = false
     /// "Looking for answer pages ..." while the book is read in the background, then a short result.
     @Published private(set) var keyStatus = ""
+    /// 0...1 while a whole book is being imported into the library, otherwise `nil`.
+    @Published private(set) var importFraction: Double?
+    @Published private(set) var library: [LessonLibrary.Entry] = []
+    /// The book opened from the library (pages are saved pictures), or `nil` when a PDF is open.
+    @Published private(set) var libraryID: String?
+    private var libraryPack: LessonPack?
+    private let lessons = LessonLibrary(root: BookImporter.libraryRoot)
+    private var importTask: Task<Void, Never>?
+    private var cancelFlag = CancelFlag()
 
     /// Text of every page that has been read (page index -> lines). Filled by the background scan and by `show`.
     private var pageText: [Int: [RecognizedLine]] = [:]
@@ -40,8 +49,97 @@ final class ImportModel: ObservableObject {
     private var bookName = "book"
     private var keys: [String: AnswerKey] = [:]
 
-    var canGoBack: Bool { book != nil && pageIndex > 0 && !isWorking }
-    var canGoForward: Bool { book != nil && pageIndex < pageCount - 1 && !isWorking }
+    var canGoBack: Bool { (book != nil || libraryPack != nil) && pageIndex > 0 && !isWorking }
+    var canGoForward: Bool { (book != nil || libraryPack != nil) && pageIndex < pageCount - 1 && !isWorking }
+    var canImportBook: Bool { book != nil && importTask == nil }
+    var language: BookLanguage {
+        if let pack = libraryPack { return BookLanguage(rawValue: pack.language) ?? .english }
+        return BookLanguage.detect(from: lines.map(\.text))
+    }
+
+    init() { library = lessons.list() }
+
+    // MARK: Library (PP-004) and whole-book import (PP-003, PP-005)
+
+    /// Reads every page of the open PDF into the library. Pages already done are not read again.
+    func importBook() {
+        guard let book, importTask == nil else { return }
+        let id = BookImporter.bookID(from: bookName)
+        let title = BookImporter.title(from: bookName)
+        let flag = CancelFlag()
+        cancelFlag = flag
+        let total = book.pageCount
+        let lessons = lessons
+        importFraction = 0
+        status = "Importing \(title) ..."
+        let report: @Sendable (ImportProgress) -> Void = { [weak self] p in
+            Task { @MainActor in
+                guard let self, self.importTask != nil else { return }
+                self.importFraction = p.fraction
+                self.status = "Importing \(title): page \(p.finished.count) of \(total)"
+            }
+        }
+        importTask = Task { [weak self] in
+            let result = await Task.detached(priority: .utility) {
+                BookImporter.run(book: book, id: id, title: title, library: lessons, cancel: flag, progress: report)
+            }.value
+            guard let self else { return }
+            self.importFraction = nil
+            self.importTask = nil
+            self.library = lessons.list()
+            self.status = result.isDone
+                ? "\(title) is in the library (\(total) pages)."
+                : "Import stopped at \(result.finished.count) of \(total) pages. Import again to continue."
+        }
+    }
+
+    func cancelImport() { cancelFlag.raise() }
+
+    func openFromLibrary(id: String) {
+        guard importTask == nil, let pack = try? lessons.load(id: id), !pack.pages.isEmpty else {
+            status = "Could not open that book from the library."
+            return
+        }
+        scanTask?.cancel()
+        generation += 1
+        book = nil
+        isWorking = false
+        refreshAfterShow = false
+        keyStatus = ""
+        libraryID = id
+        libraryPack = pack
+        pageCount = pack.pages.count
+        pageIndex = 0
+        showLibraryPage(0)
+    }
+
+    func deleteFromLibrary(id: String) {
+        try? lessons.delete(id: id)
+        if libraryID == id { libraryID = nil; libraryPack = nil; image = nil; tasks = []; pageBitmap = nil; pageCount = 0 }
+        library = lessons.list()
+    }
+
+    private func showLibraryPage(_ index: Int) {
+        guard let pack = libraryPack, let id = libraryID, index >= 0, index < pack.pages.count else { return }
+        let page = pack.pages[index]
+        guard let url = lessons.imageURL(named: page.imageFile, book: id),
+              let picture = NSImage(contentsOf: url),
+              let cg = picture.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            status = "The picture of page \(index + 1) is missing."
+            return
+        }
+        image = picture
+        pageBitmap = cg
+        lines = []
+        regions = []
+        crops = []
+        circles = []
+        blanks = []
+        tasks = page.tasks
+        pageIndex = index
+        let printed = page.number > 0 ? "page \(page.number)" : "page \(index + 1)"
+        status = "\(pack.title), \(printed) (\(index + 1) of \(pack.pages.count)): \(tasks.count) task(s)"
+    }
 
     func open(url: URL) {
         let scoped = url.startAccessingSecurityScopedResource()
@@ -49,6 +147,8 @@ final class ImportModel: ObservableObject {
         do {
             let opened = try PDFBook(url: url)
             book = opened
+            libraryID = nil
+            libraryPack = nil
             bookName = url.lastPathComponent
             keys = KeyStore.load(book: bookName)
             scanTask?.cancel()
@@ -80,6 +180,7 @@ final class ImportModel: ObservableObject {
     func previous() { show(page: pageIndex - 1) }
 
     func show(page index: Int) {
+        if libraryPack != nil { showLibraryPage(index); return }
         guard let book, index >= 0, index < book.pageCount, !isWorking else { return }
         isWorking = true
         status = "Reading page \(index + 1) ..."
@@ -152,8 +253,18 @@ final class ImportModel: ObservableObject {
 
     /// Remembers the answers a parent entered for a task (kept on this Mac, per book file name).
     func saveKey(_ key: AnswerKey, for taskID: String) {
-        keys[taskID] = key
-        KeyStore.save(keys, book: bookName)
+        if var pack = libraryPack, let id = libraryID {
+            for p in pack.pages.indices {
+                guard let t = pack.pages[p].tasks.firstIndex(where: { $0.id == taskID }) else { continue }
+                pack.pages[p].tasks[t].key = key
+                pack.pages[p].tasks[t].keySource = .parent
+            }
+            libraryPack = pack
+            try? lessons.save(pack, id: id)
+        } else {
+            keys[taskID] = key
+            KeyStore.save(keys, book: bookName)
+        }
         if let i = tasks.firstIndex(where: { $0.id == taskID }) {
             tasks[i].key = key
             tasks[i].keySource = .parent

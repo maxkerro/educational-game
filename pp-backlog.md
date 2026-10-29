@@ -330,7 +330,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] The printed page number is read and shown
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
 - **Commits:** 88f2514
-- **Notes:** Old id A3. Partly done. Round 1 (M3): `PageSplit` finds the gutter from the column darkness (falls back to the centre) and maps boxes of the whole scan to the left or right page. Not yet used by the importer.
+- **Notes:** Old id A3. Partly done. Round 1 (M3): `PageSplit` finds the gutter from the column darkness (falls back to the centre) and maps boxes of the whole scan to the left or right page. Not yet used by the importer. Round 2: `PageAnalysis.split` cuts a wide scan at the gutter found from the column darkness, and `BookImporter` reads the printed page number of each half (`BookKeys.find`) into the book page. Written blind: never compiled or run on a real spread, so the gutter and number criteria stay open.
 
 ### PP-004 — Keep imported books in a library (A4)
 - **Status:** doing
@@ -344,7 +344,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Pack has a version number and loads older versions
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
 - **Commits:** 88f2514, 89b8ede, a4c4132
-- **Notes:** Old id A4. Round 1 (M3): `LessonLibrary` saves and loads a book folder (`pack.json` + picture files, atomic write), lists, renames, deletes, refuses ids with a path, loads packs without version or language and refuses newer ones. Not yet used by the app. Review 4: An empty title is refused when renaming. Review 5: an empty title has its own error (`emptyTitle`).
+- **Notes:** Old id A4. Round 1 (M3): `LessonLibrary` saves and loads a book folder (`pack.json` + picture files, atomic write), lists, renames, deletes, refuses ids with a path, loads packs without version or language and refuses newer ones. Not yet used by the app. Review 4: An empty title is refused when renaming. Review 5: an empty title has its own error (`emptyTitle`). Round 2: whole-book import writes `pack.json` after every page plus page pictures and `text-*.json` files; the Library menu lists, opens and removes books; keys a grown-up types are saved into the pack. Rename has no button yet. Cut-out pictures are not saved as separate files (tasks keep regions on the page picture). Never compiled or run.
 
 ### PP-005 — See import progress, cancel and resume (A5)
 - **Status:** doing
@@ -356,7 +356,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Resumes after quit without redoing finished pages
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
 - **Commits:** 88f2514, 89b8ede
-- **Notes:** Old id A5. Round 1 (M3): `ImportProgress` counts finished pages, saves them and resumes without redoing them; a changed page count starts fresh. The progress bar and Cancel button are not built. Review 4: A saved file with page numbers outside the book is cleaned on load.
+- **Notes:** Old id A5. Round 1 (M3): `ImportProgress` counts finished pages, saves them and resumes without redoing them; a changed page count starts fresh. The progress bar and Cancel button are not built. Review 4: A saved file with page numbers outside the book is cleaned on load. Round 2: `Import book` button with progress bar and Cancel; the progress file is saved after every page and a repeated import skips finished pages. Never compiled or run, so the criteria stay open.
 
 ### PP-008 — Cut out the pictures exactly as in the book (B2)
 - **Status:** doing

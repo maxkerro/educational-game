@@ -26,7 +26,7 @@ struct ImportView: View {
             if let page = model.pageBitmap {
                 switch task.kind {
                 case .multipleChoice, .matching, .ordering, .openTask:
-                    InteractiveTaskView(task: task, page: page, language: BookLanguage.detect(from: model.lines.map(\.text))) { model.saveKey($0, for: task.id) }
+                    InteractiveTaskView(task: task, page: page, language: model.language) { model.saveKey($0, for: task.id) }
                 default:
                     TaskPlayerView(task: task, page: page) { model.saveKey($0, for: task.id) }
                 }
@@ -42,6 +42,22 @@ struct ImportView: View {
             Button("Open PDF\u{2026}") { showImporter = true }
             Button("Previous") { model.previous() }.disabled(!model.canGoBack)
             Button("Next") { model.next() }.disabled(!model.canGoForward)
+            Button("Import book") { model.importBook() }.disabled(!model.canImportBook)
+            Menu("Library") {
+                if model.library.isEmpty { Text("No books yet") }
+                ForEach(model.library) { entry in
+                    Button("\(entry.title) (\(entry.pageCount) pages)") { model.openFromLibrary(id: entry.id) }
+                }
+                if let open = model.libraryID {
+                    Divider()
+                    Button("Remove open book from library") { model.deleteFromLibrary(id: open) }
+                }
+            }
+            .disabled(model.importFraction != nil)
+            if let fraction = model.importFraction {
+                ProgressView(value: fraction).frame(width: 120)
+                Button("Cancel") { model.cancelImport() }
+            }
             if model.isWorking { ProgressView().controlSize(.small) }
             Text(model.status)
                 .foregroundStyle(.secondary)

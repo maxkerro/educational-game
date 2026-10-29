@@ -1009,5 +1009,13 @@ do {
     check(TaskEvaluator.evaluate(task: choiceTask, response: AnswerKey(choice: "p1-t2-o2")).isComplete && TaskEvaluator.evaluate(task: choiceTask, response: AnswerKey(choice: "p1-t2-o1")).incorrect == ["choice"], "PP-021: the key judges the choice")
 }
 
+do {
+    let texts = [PageText(text: "Page 7", box: PageRect(x: 0.4, y: 0.95, width: 0.2, height: 0.03)), PageText(text: "1. Count.", box: PageRect(x: 0.1, y: 0.1, width: 0.3, height: 0.05))]
+    let data = StoredPageText(texts: texts, aspect: 0.7).encoded()
+    let back = data.flatMap { StoredPageText.decode($0) }
+    check(back?.texts == texts && back?.aspect == 0.7, "PP-005: page text survives the round trip to disk")
+    check(StoredPageText.decode(Data("nonsense".utf8)) == nil, "PP-005: damaged page text is ignored")
+}
+
 print(failures == 0 ? "\nAll checks passed." : "\n\(failures) check(s) failed.")
 exit(failures == 0 ? 0 : 1)
