@@ -20,7 +20,7 @@ done
 
 # ---- project-specific: the checks that must pass before any push ----
 CHECKS=(
-  "checks::swift run PagePalsChecks"
+  "checks::swift run -c release PagePalsChecks"
   "build::swift build"
 )
 # ----------------------------------------------------------------------

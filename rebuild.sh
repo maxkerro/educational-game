@@ -5,7 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 echo "== checks =="
-swift run PagePalsChecks
+swift run -c release PagePalsChecks
 
 pkill -x PagePals || true     # `open` would otherwise just bring the old copy to the front
 

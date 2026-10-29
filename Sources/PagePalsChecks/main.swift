@@ -936,6 +936,10 @@ do {
     let kinds = TestPages.specs.flatMap { $0 }.map { $0.kind }
     check(TestPages.kinds.allSatisfy { kind in kinds.filter { $0 == kind }.count >= 2 }, "test pages: every task type at least twice")
 
+#if DEBUG
+    // reading ten full pages takes over a minute each in a debug build: run `swift run -c release PagePalsChecks`
+    print("SKIP  test pages: not scored in a debug build (swift run -c release PagePalsChecks scores them)")
+#else
     let none = RecognitionScore.Result(expected: 0, hits: 0, extras: 0)
     var circles = none
     var bars = none
@@ -964,6 +968,7 @@ do {
     check(circles.recall >= 0.8 && circles.precision >= 0.8, "PP-009: empty circles on the test pages (\(circles.hits)/\(circles.expected), \(circles.extras) extra)")
     check(bars.recall >= 0.8 && bars.precision >= 0.8, "PP-010: answer bars on the test pages (\(bars.hits)/\(bars.expected), \(bars.extras) extra)")
     check(ticks.recall >= 0.8 && ticks.precision >= 0.8, "PP-011: tick circles on the test pages (\(ticks.hits)/\(ticks.expected), \(ticks.extras) extra)")
+#endif
 }
 
 // PP-020 / PP-021 / PP-025 / PP-026: builders for the other task types
