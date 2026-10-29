@@ -208,16 +208,32 @@ public enum TestPages {
 
     /// Runs the same steps as the app on a test page (text, headers, circles, bars, tick circles, pictures).
     public static func score(_ page: TestPage) throws -> Score {
+        // PAGEPALS_TRACE=1 prints every step with its time, to find a step that is very slow
+        let trace = ProcessInfo.processInfo.environment["PAGEPALS_TRACE"] != nil
+        var mark = Date()
+        func step(_ name: String) {
+            guard trace else { return }
+            print(String(format: "TRACE  %@: %@ %.1f s", page.name, name, Date().timeIntervalSince(mark)))
+            mark = Date()
+        }
         let lines = try PageOCR.recognize(page.image)
+        step("text recognition")
         let words = lines.filter { $0.confidence >= 0.5 }.flatMap { $0.words }
         let found = Set(lines.compactMap { TaskBuilder.headerParts($0.text)?.number })
         let headersFound = page.headerNumbers.filter { found.contains($0) }.count
         let regions = PictureFinder.find(in: page.image, textWords: words).filter { $0.kind == .picture }.map { $0.box }
+        step("pictures")
+        let circleBoxes = CircleFinder.findEmpty(in: page.image, textWords: words)
+        step("circles")
+        let barBoxes = BlankFinder.find(in: page.image)
+        step("bars")
+        let tickBoxes = TickFinder.find(in: page.image)
+        step("ticks")
         return Score(
             name: page.name,
-            circles: RecognitionScore.match(expected: page.circles, found: CircleFinder.findEmpty(in: page.image, textWords: words)),
-            bars: RecognitionScore.match(expected: page.bars, found: BlankFinder.find(in: page.image)),
-            ticks: RecognitionScore.match(expected: page.ticks, found: TickFinder.find(in: page.image)),
+            circles: RecognitionScore.match(expected: page.circles, found: circleBoxes),
+            bars: RecognitionScore.match(expected: page.bars, found: barBoxes),
+            ticks: RecognitionScore.match(expected: page.ticks, found: tickBoxes),
             pictures: RecognitionScore.match(expected: page.pictures, found: regions, tolerance: 0.05),
             headersExpected: page.headerNumbers.count,
             headersFound: headersFound
