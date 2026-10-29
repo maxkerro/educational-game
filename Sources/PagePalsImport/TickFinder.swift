@@ -21,6 +21,13 @@ public enum TickFinder {
         let rMin = 10, rMax = 24
         let peaks = HoughCircles.peaks(norm: norm, w: w, h: h, rMin: rMin, rMax: rMax, edge: 0.2, vote: 14)
 
+        // PAGEPALS_TRACE=1 says why a candidate was dropped (used on the test pages)
+        let trace = ProcessInfo.processInfo.environment["PAGEPALS_TRACE"] != nil
+        func why(_ p: (x: Int, y: Int), _ reason: String) {
+            if trace { print("TICK   candidate at \(p.x),\(p.y): \(reason)") }
+        }
+        if trace { print("TICK   \(peaks.count) circle candidates") }
+
         struct Disc { let x: Int; let y: Int; let r: Int }
         var discs: [Disc] = []
         for p in peaks {
@@ -43,7 +50,7 @@ public enum TickFinder {
                 let cov = Double(hit) / 72
                 if cov > bestCoverage { bestCoverage = cov; bestR = r }
             }
-            if bestCoverage < 0.9 || bestR == 0 { continue }
+            if bestCoverage < 0.9 || bestR == 0 { why(p, "ring covers \(Int(bestCoverage * 100)) % at r=\(bestR)"); continue }
 
             // inside: evenly grey (not paper, not ink) and colourless
             var total = 0, grey = 0, satSum = 0
@@ -59,7 +66,7 @@ public enum TickFinder {
                     }
                 }
             }
-            if total == 0 || Double(grey) / Double(total) < 0.85 || satSum / total >= 40 { continue }
+            if total == 0 || Double(grey) / Double(total) < 0.85 || satSum / total >= 40 { why(p, "inside grey \(total == 0 ? 0 : Int(Double(grey) * 100 / Double(total))) %, colour \(total == 0 ? 0 : satSum / total), r=\(bestR)"); continue }
 
             // clean paper around the ring
             var clean = 0
@@ -70,7 +77,7 @@ public enum TickFinder {
                 let py = p.y + Int((rr * sin(ang)).rounded())
                 if px < 0 || px >= w || py < 0 || py >= h || norm[py * w + px] > 0.9 { clean += 1 }
             }
-            if Double(clean) / 72 < 0.9 { continue }
+            if Double(clean) / 72 < 0.9 { why(p, "paper around the ring \(Int(Double(clean) * 100 / 72)) %, r=\(bestR)"); continue }
 
             if discs.contains(where: { hypot(Double($0.x - p.x), Double($0.y - p.y)) < Double(min($0.r, bestR)) }) { continue }
             discs.append(Disc(x: p.x, y: p.y, r: bestR))
