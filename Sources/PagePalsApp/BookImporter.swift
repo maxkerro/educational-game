@@ -106,7 +106,7 @@ enum BookImporter {
                     try library.writeImage(data, named: "text-\(index + 1)\(suffix).json", book: id)
                 }
             } catch { continue }
-            let printed = BookKeys.find(texts).first?.number ?? 0
+            let printed = PageNumbers.number(atX: 0.5, lines: texts, pageAspect: aspect) ?? 0
             pages.append(BookPage(id: pageID, number: printed, imageFile: file, tasks: tasks))
         }
         return pages
