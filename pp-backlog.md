@@ -154,7 +154,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
 - **Story:** As a maintainer, I want checks to run before every push so that a bad change cannot reach GitHub.
 - **Description:** Safe for children, works without the internet. Old E0-4, E7-6.
 - **Acceptance criteria:**
-  - [x] `swift run PagePalsChecks` has over 200 checks and runs first in `push.sh`, before `git push` and the review hook
+  - [x] `swift run PagePalsChecks` has over 250 checks and runs first in `push.sh`, before `git push` and the review hook
   - [ ] Recognition quality checks on the test pages (B10)
   - [ ] GitHub Actions runs build and checks
 - **Tests:** 
@@ -591,40 +591,40 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
 ## M5 — Game and parent area
 
 ### PP-002 — Open books by drag and drop and from a recent list (A2)
-- **Status:** todo
+- **Status:** doing
 - **Area:** Open a book · **Points:** 2 · **Priority:** Could · **Depends on:** —
 - **Story:** As a parent, I want to drop a PDF on the window or pick it from a recent list so that starting a lesson takes one step.
 - **Description:** A grown-up opens a PDF workbook and the app keeps it.
 - **Acceptance criteria:**
   - [ ] Drop a PDF on the window opens it
   - [ ] Last 5 books are listed on the start screen
-- **Tests:** 
+- **Tests:** Sources/PagePalsChecks/main.swift (logic only)
 - **Commits:** 
-- **Notes:** Old id A2.
+- **Notes:** Old id A2. Round 1 (M5): `RecentBooks` keeps the last 5 books, newest first, and accepts only PDFs for drop. Start screen and drop target not built.
 
 ### PP-027 — Get hints that do not give the answer away (C11)
-- **Status:** todo
+- **Status:** doing
 - **Area:** Play: one interactive page per task · **Points:** 5 · **Priority:** Should · **Depends on:** —
 - **Story:** As a child, I want a small hint when I am stuck so that I learn instead of guessing.
 - **Description:** The child sees the book page and answers on it. Old E3-9.
 - **Acceptance criteria:**
   - [ ] After two wrong tries the field is highlighted
   - [ ] Then the first letter or the matching word is shown
-- **Tests:** 
+- **Tests:** Sources/PagePalsChecks/main.swift (logic only)
 - **Commits:** 
-- **Notes:** Old id C11.
+- **Notes:** Old id C11. Round 1 (M5): `HintTracker`: highlight after two wrong tries, first letter after three; no hint when the first character is the answer (digits, one letter). Not shown in the player yet.
 
 ### PP-028 — Hear words read aloud (C12)
-- **Status:** todo
+- **Status:** doing
 - **Area:** Play: one interactive page per task · **Points:** 5 · **Priority:** Should · **Depends on:** —
 - **Story:** As a child, I want to tap a word or sentence and hear it so that I learn how it sounds, also when I cannot read yet.
 - **Description:** The child sees the book page and answers on it. Old E5-8.
 - **Acceptance criteria:**
   - [ ] Works offline with the voices installed on the Mac (English, German)
   - [ ] Speed control
-- **Tests:** 
+- **Tests:** Sources/PagePalsChecks/main.swift (logic only)
 - **Commits:** 
-- **Notes:** Old id C12.
+- **Notes:** Old id C12. Round 1 (M5): `SpeechSettings` (voice language per book, speed) and `Speaker` (system voices, offline). No tap-to-hear in the player yet; never run.
 
 ### PP-042 — See where an answer came from (D12)
 - **Status:** doing
@@ -638,74 +638,74 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
 - **Notes:** Old id D12. Partly done. Round 2: the source (calculated, answer page, typed by a grown-up, on-device model) is shown on each task in the Import tab; the review editor (G2, PP-054) does not exist yet.
 
 ### PP-046 — Grow a Pal with stars (F1)
-- **Status:** todo
+- **Status:** doing
 - **Area:** Game layer · **Points:** 8 · **Priority:** Must · **Depends on:** —
 - **Story:** As a child, I want a friend that grows when I finish tasks so that I want to learn more.
 - **Description:** Children want to come back by themselves. No dark patterns. Old E5-1, E5-2.
 - **Acceptance criteria:**
   - [ ] Three growth stages, original art
   - [ ] Stars per task
-- **Tests:** 
+- **Tests:** Sources/PagePalsChecks/main.swift (logic only)
 - **Commits:** 
-- **Notes:** Old id F1.
+- **Notes:** Old id F1. Round 1 (M5): `StarLedger`: 3/2/1 stars per task by wrong tries, best result per task only, three stages at 0/15/45 stars. No Pal art or view yet.
 
 ### PP-047 — Travel a world map (F2)
-- **Status:** todo
+- **Status:** doing
 - **Area:** Game layer · **Points:** 8 · **Priority:** Must · **Depends on:** —
 - **Story:** As a child, I want a map where every chapter is an island so that I see how far I am.
 - **Description:** Children want to come back by themselves. No dark patterns. Old E5-3.
 - **Acceptance criteria:**
   - [ ] Chapters = islands, pages = stops, calm unlocking
-- **Tests:** 
+- **Tests:** Sources/PagePalsChecks/main.swift (logic only)
 - **Commits:** 
-- **Notes:** Old id F2.
+- **Notes:** Old id F2. Round 1 (M5): `WorldMap.islands`: chapters become islands, pages stops; the next island opens when half of the one before is done. No map view yet; chapters still need to come from the book.
 
 ### PP-048 — Gentle daily streak (F3)
-- **Status:** todo
+- **Status:** doing
 - **Area:** Game layer · **Points:** 2 · **Priority:** Should · **Depends on:** —
 - **Story:** As a child, I want to be cheered for coming back so that it feels good, not bad, when I miss a day.
 - **Description:** Children want to come back by themselves. No dark patterns. Old E5-6.
 - **Acceptance criteria:**
   - [ ] No loss framing, no guilt messages
-- **Tests:** 
+- **Tests:** Sources/PagePalsChecks/main.swift (logic only)
 - **Commits:** 
-- **Notes:** Old id F3.
+- **Notes:** Old id F3. Round 1 (M5): `VisitLog`: greetings only cheer ('2 days in a row', 'Welcome back'); missed days are never mentioned. Not shown yet.
 
 ### PP-049 — Pal reacts (F4)
-- **Status:** todo
+- **Status:** doing
 - **Area:** Game layer · **Points:** 5 · **Priority:** Should · **Depends on:** —
 - **Story:** As a child, I want my Pal to cheer, comfort or nap so that it feels alive.
 - **Description:** Children want to come back by themselves. No dark patterns. Old E5-4.
 - **Acceptance criteria:**
   - [ ] Cheer on right, comfort on wrong, nap when I stop
-- **Tests:** 
+- **Tests:** Sources/PagePalsChecks/main.swift (logic only)
 - **Commits:** 
-- **Notes:** Old id F4.
+- **Notes:** Old id F4. Round 1 (M5): `PalReaction`: cheer on right, comfort on wrong (no blame), nap after 2 minutes idle; lines in English, German, Russian. No animation yet.
 
 ### PP-050 — Sounds and music (F5)
-- **Status:** todo
+- **Status:** doing
 - **Area:** Game layer · **Points:** 5 · **Priority:** Should · **Depends on:** —
 - **Story:** As a child, I want friendly sounds with a mute button so that it is fun and not loud.
 - **Description:** Children want to come back by themselves. No dark patterns. Old E5-7.
 - **Acceptance criteria:**
   - [ ] Mute and volume, all sounds optional
-- **Tests:** 
+- **Tests:** Sources/PagePalsChecks/main.swift (logic only)
 - **Commits:** 
-- **Notes:** Old id F5.
+- **Notes:** Old id F5. Round 1 (M5): `SoundSettings`: mute silences everything, volume kept in range, effects optional, music off by default. No sounds are played yet.
 
 ### PP-051 — Room with collectibles (F6)
-- **Status:** todo
+- **Status:** doing
 - **Area:** Game layer · **Points:** 8 · **Priority:** Should · **Depends on:** —
 - **Story:** As a child, I want to decorate a room with things I earned so that I have something of my own.
 - **Description:** Children want to come back by themselves. No dark patterns. Old E5-5.
 - **Acceptance criteria:**
   - [ ] Earned, never bought
-- **Tests:** 
+- **Tests:** Sources/PagePalsChecks/main.swift (logic only)
 - **Commits:** 
-- **Notes:** Old id F6.
+- **Notes:** Old id F6. Round 1 (M5): `Room`: things are earned at star levels (stars are not spent) and can be placed and removed. No room view or art yet.
 
 ### PP-054 — Correct what the app got wrong (G2)
-- **Status:** todo
+- **Status:** doing
 - **Area:** Parent area and review · **Points:** 8 · **Priority:** Must · **Depends on:** —
 - **Story:** As a parent, I want to move or resize boxes, change the task type and fix answers so that a wrong recognition is not the end.
 - **Description:** Grown-ups stay in control without doing the work. Old E2-2..E2-6, E9-10.
@@ -714,53 +714,53 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Change task type, prompt and answers
   - [ ] Assign a picture to a word
   - [ ] Undo and redo
-- **Tests:** 
+- **Tests:** Sources/PagePalsChecks/main.swift (logic only)
 - **Commits:** 
-- **Notes:** Old id G2.
+- **Notes:** Old id G2. Round 1 (M5): `EditHistory` (undo/redo) and `TaskEdit` (move a box, change type, prompt, answers, picture). The editor view is not built.
 
 ### PP-055 — Open the grown-up area safely (G3)
-- **Status:** todo
+- **Status:** doing
 - **Area:** Parent area and review · **Points:** 2 · **Priority:** Must · **Depends on:** —
 - **Story:** As a parent, I want a simple adult gate so that children cannot change answers or limits.
 - **Description:** Grown-ups stay in control without doing the work. Old E6-1.
 - **Acceptance criteria:**
   - [ ] A small adult challenge before the area opens
-- **Tests:** 
+- **Tests:** Sources/PagePalsChecks/main.swift (logic only)
 - **Commits:** 
-- **Notes:** Old id G3.
+- **Notes:** Old id G3. Round 1 (M5): `AdultGate` (two-digit times one-digit sum) and `GateLock` (three mistakes lock for a minute). Not shown before the parent area yet.
 
 ### PP-056 — See progress (G4)
-- **Status:** todo
+- **Status:** doing
 - **Area:** Parent area and review · **Points:** 5 · **Priority:** Should · **Depends on:** —
 - **Story:** As a parent, I want pages done, accuracy and hard items so that I know where my child needs help.
 - **Description:** Grown-ups stay in control without doing the work. Old E6-2.
 - **Acceptance criteria:**
   - [ ] Per child, per book, per task type
-- **Tests:** 
+- **Tests:** Sources/PagePalsChecks/main.swift (logic only)
 - **Commits:** 
-- **Notes:** Old id G4.
+- **Notes:** Old id G4. Round 1 (M5): `ProgressReport`: accuracy per child, book and task type, and hard items. Attempts are not recorded by the player yet.
 
 ### PP-057 — Set a daily time limit (G5)
-- **Status:** todo
+- **Status:** doing
 - **Area:** Parent area and review · **Points:** 5 · **Priority:** Should · **Depends on:** —
 - **Story:** As a parent, I want a calm end of the session so that screen time stays in my hands.
 - **Description:** Grown-ups stay in control without doing the work. Old E6-3.
 - **Acceptance criteria:**
   - [ ] The Pal says goodbye, no cut-off in the middle of a task
-- **Tests:** 
+- **Tests:** Sources/PagePalsChecks/main.swift (logic only)
 - **Commits:** 
-- **Notes:** Old id G5.
+- **Notes:** Old id G5. Round 1 (M5): `SessionLimit`: wind-down two minutes before the limit, never in the middle of a task, then goodbye. Not connected to a clock yet.
 
 ### PP-058 — Several children (G6)
-- **Status:** todo
+- **Status:** doing
 - **Area:** Parent area and review · **Points:** 5 · **Priority:** Should · **Depends on:** —
 - **Story:** As a parent, I want a profile per child on this Mac so that each child has their own progress.
 - **Description:** Grown-ups stay in control without doing the work. Old E6-4.
 - **Acceptance criteria:**
   - [ ] Local profiles, no accounts
-- **Tests:** 
+- **Tests:** Sources/PagePalsChecks/main.swift (logic only)
 - **Commits:** 
-- **Notes:** Old id G6.
+- **Notes:** Old id G6. Round 1 (M5): `ProfileList`: local profiles with unique names, saved to a file. No profile picker yet.
 
 ## M6 — Release
 

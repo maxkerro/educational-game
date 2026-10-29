@@ -646,5 +646,161 @@ do {
     check(BookLanguage.allCases.map(\.rawValue) == ["en", "de", "ru"], "PP-006: pack language codes")
 }
 
+// M5 logic: game layer and parent area
+do {
+    var ledger = StarLedger()
+    check(StarLedger.stars(complete: true, wrongTries: 0) == 3 && StarLedger.stars(complete: true, wrongTries: 2) == 2 && StarLedger.stars(complete: true, wrongTries: 5) == 1 && StarLedger.stars(complete: false, wrongTries: 0) == 0, "PP-046: stars per task")
+    for i in 0..<4 { ledger.award(3, task: "t\(i)") }
+    check(ledger.total == 12 && ledger.stage == .little && ledger.starsToNextStage == 3, "PP-046: stars add up")
+    ledger.award(3, task: "t0")
+    check(ledger.total == 12, "PP-046: the same task does not earn twice")
+    check(ledger.award(3, task: "t4") == .growing && ledger.stage == .growing, "PP-046: the Pal grows at 15 stars")
+    ledger.award(9, task: "t5")
+    check(ledger.best["t5"] == 3, "PP-046: at most 3 stars per task")
+    for i in 6..<20 { ledger.award(3, task: "t\(i)") }
+    check(ledger.stage == .big && ledger.starsToNextStage == nil, "PP-046: three stages")
+}
+
+do {
+    let chapters = [WorldMap.Chapter(name: "Island 1", pageIds: ["p1", "p2", "p3", "p4"]),
+                    WorldMap.Chapter(name: "Island 2", pageIds: ["p5", "p6"]),
+                    WorldMap.Chapter(name: "Island 3", pageIds: ["p7"])]
+    let start = WorldMap.islands(chapters, finished: [])
+    check(start.map(\.unlocked) == [true, false, false], "PP-047: only the first island is open at the start")
+    let half = WorldMap.islands(chapters, finished: ["p1", "p3"])
+    check(half.map(\.unlocked) == [true, true, false] && half[0].doneCount == 2, "PP-047: half of an island opens the next one")
+    let more = WorldMap.islands(chapters, finished: ["p1", "p2", "p3", "p4", "p6"])
+    check(more[0].isDone && more[2].unlocked, "PP-047: islands open one after another")
+}
+
+do {
+    var log = VisitLog()
+    let first = log.visit(day: 100)
+    let next = log.visit(day: 101)
+    let again = log.visit(day: 101)
+    let back = log.visit(day: 110)
+    check(first.contains("Hello") && next.contains("2 days") && again.contains("2 days") && back.contains("Welcome back"), "PP-048: greetings cheer")
+    let bad = ["lost", "lose", "miss", "broke", "sad", "again tomorrow or"]
+    check(![first, next, again, back].contains { msg in bad.contains { msg.lowercased().contains($0) } }, "PP-048: no loss or guilt words")
+    check(log.run(endingAt: 110) == 1 && log.run(endingAt: 101) == 2, "PP-048: days in a row")
+    var cal = Calendar(identifier: .gregorian)
+    cal.timeZone = TimeZone(identifier: "Europe/Berlin")!
+    let d1 = cal.date(from: DateComponents(year: 2026, month: 10, day: 24, hour: 23))!
+    let d2 = cal.date(from: DateComponents(year: 2026, month: 10, day: 25, hour: 1))!
+    check(VisitLog.dayNumber(d2, calendar: cal) - VisitLog.dayNumber(d1, calendar: cal) == 1, "PP-048: day numbers across the clock change")
+}
+
+do {
+    check(PalReaction.mood(lastAnswerCorrect: true, secondsIdle: 3) == .cheer, "PP-049: cheer on right")
+    check(PalReaction.mood(lastAnswerCorrect: false, secondsIdle: 3) == .comfort, "PP-049: comfort on wrong")
+    check(PalReaction.mood(lastAnswerCorrect: true, secondsIdle: 200) == .nap, "PP-049: nap when the child stops")
+    check(PalReaction.mood(lastAnswerCorrect: nil, secondsIdle: 0) == .happy, "PP-049: happy at the start")
+    check(!PalReaction.line(.comfort, language: .english).lowercased().contains("wrong"), "PP-049: comfort does not blame")
+    check(PalReaction.line(.cheer, language: .german) != PalReaction.line(.cheer, language: .english), "PP-049: lines in the book language")
+}
+
+do {
+    check(SoundSettings().volume(for: .music) == 0 && SoundSettings().volume(for: .effect) > 0, "PP-050: calm defaults, music off")
+    check(SoundSettings(muted: true).volume(for: .effect) == 0 && SoundSettings(muted: true).volume(for: .speech) == 0, "PP-050: mute silences everything")
+    check(SoundSettings(volume: 3).volume(for: .speech) == 1 && SoundSettings(effects: false).volume(for: .effect) == 0, "PP-050: volume is kept in range, effects optional")
+}
+
+do {
+    var room = Room()
+    check(Room.earned(totalStars: 12).map(\.id) == ["plant", "lamp"], "PP-051: things are earned with stars")
+    check(!room.place("rocket", x: 0.5, y: 0.5, totalStars: 12), "PP-051: things not earned cannot be placed")
+    check(room.place("lamp", x: 1.4, y: -1, totalStars: 12) && room.placed["lamp"] == Room.Spot(x: 1, y: 0), "PP-051: placed inside the room")
+    room.remove("lamp")
+    check(room.placed.isEmpty, "PP-051: remove a thing")
+}
+
+do {
+    var hints = HintTracker()
+    hints.record("a", correct: false)
+    check(hints.level("a") == .none, "PP-027: one wrong try gives no hint")
+    hints.record("a", correct: false)
+    check(hints.level("a") == .highlight, "PP-027: two wrong tries highlight the field")
+    hints.record("a", correct: false)
+    check(hints.level("a") == .firstLetter && HintTracker.hint(for: "pencil", level: .firstLetter) == "p…", "PP-027: then the first letter")
+    check(HintTracker.hint(for: "7", level: .firstLetter) == nil && HintTracker.hint(for: "12", level: .firstLetter) == nil, "PP-027: no hint that is the answer itself")
+    hints.record("a", correct: true)
+    check(hints.level("a") == .none && hints.totalWrong == 3, "PP-027: solved field resets, wrong tries still count for stars")
+}
+
+do {
+    var task = PlayTask(id: "t", kind: .openTask, prompt: "Old", items: [TaskItem(id: "a")], key: nil, confidence: 0.3)
+    var history = EditHistory(task)
+    history.apply { TaskEdit.setKind(.fillIn).apply(to: &$0) }
+    history.apply { TaskEdit.setPrompt("New").apply(to: &$0) }
+    history.apply { TaskEdit.setAnswer(itemId: "a", text: " 4 ").apply(to: &$0) }
+    history.apply { TaskEdit.moveItem(id: "a", to: PageRect(x: 0.1, y: 0.2, width: 0.1, height: 0.05)).apply(to: &$0) }
+    history.apply { TaskEdit.assignPicture(itemId: "a", imageFile: "a.png").apply(to: &$0) }
+    task = history.current
+    check(task.kind == .fillIn && task.prompt == "New" && task.key?.text["a"] == "4" && task.keySource == .parent && task.items[0].imageFile == "a.png" && task.items[0].region?.x == 0.1, "PP-054: edits change the task")
+    history.undo(); history.undo()
+    check(history.current.items[0].region == nil && history.current.key?.text["a"] == "4", "PP-054: undo goes back step by step")
+    history.redo()
+    check(history.current.items[0].region?.x == 0.1 && history.canRedo, "PP-054: redo")
+    history.apply { TaskEdit.setPrompt("New").apply(to: &$0) }
+    check(history.canRedo, "PP-054: a change that changes nothing keeps redo")
+    history.apply { TaskEdit.setPrompt("Newer").apply(to: &$0) }
+    check(!history.canRedo, "PP-054: a new change clears redo")
+}
+
+do {
+    let gate = AdultGate(seed: 42)
+    check(gate.answer >= 36 && gate.answer <= 261 && gate.accepts(" \(gate.answer) ") && !gate.accepts("\(gate.answer + 1)"), "PP-055: adult sum is checked")
+    check(AdultGate(seed: 1) != AdultGate(seed: 2) || AdultGate(seed: 1) != AdultGate(seed: 3), "PP-055: sums change")
+    var lock = GateLock()
+    lock.record(correct: false, now: 0); lock.record(correct: false, now: 1)
+    check(!lock.isLocked(now: 2), "PP-055: two mistakes do not lock")
+    lock.record(correct: false, now: 2)
+    check(lock.isLocked(now: 30) && !lock.isLocked(now: 63), "PP-055: three mistakes lock for a minute")
+}
+
+do {
+    let tries = [Attempt(child: "ann", book: "B1", taskId: "t1", itemId: "a", kind: .fillIn, correct: false),
+                 Attempt(child: "ann", book: "B1", taskId: "t1", itemId: "a", kind: .fillIn, correct: false),
+                 Attempt(child: "ann", book: "B1", taskId: "t1", itemId: "a", kind: .fillIn, correct: true),
+                 Attempt(child: "ann", book: "B2", taskId: "t9", itemId: "x", kind: .trueFalse, correct: true),
+                 Attempt(child: "ben", book: "B1", taskId: "t1", itemId: "a", kind: .fillIn, correct: true)]
+    let books = ProgressReport.byBook(tries, child: "ann")
+    check(books["B1"]?.total == 3 && books["B1"]?.right == 1 && books["B2"]?.share == 1, "PP-056: accuracy per book and child")
+    check(ProgressReport.byKind(tries, child: "ann")[.trueFalse]?.total == 1, "PP-056: accuracy per task type")
+    check(ProgressReport.hardItems(tries, child: "ann") == ["B1/t1/a"] && ProgressReport.hardItems(tries, child: "ben").isEmpty, "PP-056: hard items")
+}
+
+do {
+    let limit = SessionLimit(minutes: 20)
+    check(limit.phase(elapsedMinutes: 10, inTask: true) == .play, "PP-057: play before the limit")
+    check(limit.phase(elapsedMinutes: 18.5, inTask: false) == .windDown, "PP-057: the Pal starts saying goodbye")
+    check(limit.phase(elapsedMinutes: 21, inTask: true) == .windDown, "PP-057: no cut-off in the middle of a task")
+    check(limit.phase(elapsedMinutes: 21, inTask: false) == .goodbye, "PP-057: goodbye after the task")
+    check(SessionLimit().phase(elapsedMinutes: 500, inTask: false) == .play, "PP-057: no limit set")
+}
+
+do {
+    var kids = ProfileList()
+    let ann = kids.add(name: " Ann ")
+    check(ann?.name == "Ann" && kids.add(name: "ann") == nil && kids.add(name: "  ") == nil, "PP-058: unique, trimmed names")
+    let ben = kids.add(name: "Ben")
+    check(!kids.rename(id: ben!.id, to: "ANN") && kids.rename(id: ben!.id, to: "Benny"), "PP-058: rename keeps names unique")
+    let file = FileManager.default.temporaryDirectory.appendingPathComponent("pp-kids-" + UUID().uuidString + ".json")
+    defer { try? FileManager.default.removeItem(at: file) }
+    try? kids.save(to: file)
+    check(ProfileList.load(from: file) == kids, "PP-058: profiles are kept on the Mac")
+    kids.remove(id: ann!.id)
+    check(kids.profiles.map(\.name) == ["Benny"], "PP-058: remove a profile")
+}
+
+do {
+    var recent = RecentBooks()
+    for name in ["a", "b", "c", "d", "e", "f"] { recent.opened("/books/\(name).pdf") }
+    recent.opened("/books/c.pdf")
+    check(recent.paths.count == 5 && recent.paths.first == "/books/c.pdf" && !recent.paths.contains("/books/a.pdf"), "PP-002: last 5 books, newest first")
+    check(RecentBooks.isPDF("Book.PDF") && !RecentBooks.isPDF("photo.png"), "PP-002: only PDFs are dropped")
+    check(SpeechSettings().voiceLanguage(for: .german) == "de-DE" && SpeechSettings(speed: 9).utteranceRate == 0.75 && SpeechSettings(speed: 1).utteranceRate == 0.5, "PP-028: voice language and speed")
+}
+
 print(failures == 0 ? "\nAll checks passed." : "\n\(failures) check(s) failed.")
 exit(failures == 0 ? 0 : 1)
