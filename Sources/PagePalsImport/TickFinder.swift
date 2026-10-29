@@ -34,6 +34,7 @@ public enum TickFinder {
             // closed ring
             var bestR = 0
             var bestCoverage = 0.0
+            var coverages: [Double] = []
             for r in rMin...rMax {
                 var hit = 0
                 for k in 0..<72 {
@@ -48,8 +49,12 @@ public enum TickFinder {
                     if found { hit += 1 }
                 }
                 let cov = Double(hit) / 72
+                coverages.append(cov)
                 if cov > bestCoverage { bestCoverage = cov; bestR = r }
             }
+            // A grey disc is darker than paper at every radius inside the ring, so the first best radius can be
+            // far too small: take the outermost radius that is as good as the best (the rim of the disc).
+            if let outer = coverages.lastIndex(where: { $0 >= bestCoverage - 0.02 }) { bestR = rMin + outer }
             if bestCoverage < 0.9 || bestR == 0 { why(p, "ring covers \(Int(bestCoverage * 100)) % at r=\(bestR)"); continue }
 
             // inside: evenly grey (not paper, not ink) and colourless
