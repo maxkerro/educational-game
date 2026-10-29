@@ -32,7 +32,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
 - **Notes:** Old id A1.
 
 ### PP-007 — Find every task on a page (B1)
-- **Status:** done
+- **Status:** doing
 - **Area:** Recognise the tasks on a page · **Points:** 5 · **Priority:** Must · **Depends on:** —
 - **Story:** As a parent, I want each numbered task to be found with its instruction so that each task becomes its own page.
 - **Description:** The app finds each task, its answer fields and its pictures by itself. Old E1-4.
@@ -42,7 +42,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Test pages measure ≥ 90% of headers found (see B10)
 - **Tests:** 
 - **Commits:** 
-- **Notes:** Old id B1.
+- **Notes:** Old id B1. Status check (2026-10-29): set back to doing because AC3 (found headers measured on test pages) is open until the test pages of B10 exist.
 
 ### PP-009 — Find empty circles to fill (B3)
 - **Status:** done
