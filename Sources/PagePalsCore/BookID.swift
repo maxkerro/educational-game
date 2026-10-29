@@ -12,7 +12,7 @@ public enum BookID {
         let hex = String(fingerprint, radix: 16)
         let tail = String(repeating: "0", count: max(0, 16 - hex.count)) + hex
         let name = cleaned.isEmpty ? "book" : String(cleaned.prefix(60))
-        return name + "-" + tail.prefix(10)
+        return name + "-" + tail.suffix(10)
     }
 
     /// What the grown-up sees in the library: the file name without ".pdf".
