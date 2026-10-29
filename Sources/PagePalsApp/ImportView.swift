@@ -24,7 +24,12 @@ struct ImportView: View {
         }
         .sheet(item: $playing) { task in
             if let page = model.pageBitmap {
-                TaskPlayerView(task: task, page: page) { model.saveKey($0, for: task.id) }
+                switch task.kind {
+                case .multipleChoice, .matching, .ordering, .openTask:
+                    InteractiveTaskView(task: task, page: page, language: BookLanguage.detect(from: model.lines.map(\.text))) { model.saveKey($0, for: task.id) }
+                default:
+                    TaskPlayerView(task: task, page: page) { model.saveKey($0, for: task.id) }
+                }
             }
         }
         .fileImporter(isPresented: $showImporter, allowedContentTypes: [.pdf]) { result in
@@ -107,7 +112,7 @@ struct ImportView: View {
                             Text(task.prompt).fontWeight(.medium)
                             Text(taskSummary(task)).font(.caption).foregroundStyle(.secondary)
                             Button("Play") { playing = task }
-                                .disabled(task.kind != .numberInOrder && task.kind != .fillIn && task.kind != .trueFalse)
+                                .disabled(task.kind == .crossword || task.kind == .wordSearch)
                             if let source = sourceLabel(task) {
                                 let unsure = AnswerReconciler.needsGrownUp(task)
                                 Label(source, systemImage: unsure ? "questionmark.circle" : "checkmark.seal")
@@ -174,6 +179,7 @@ struct ImportView: View {
     /// Only tasks whose answers could not be worked out automatically are marked.
     private func needsGrownUp(_ task: PlayTask) -> Bool {
         let playable = task.kind == .numberInOrder || task.kind == .fillIn || task.kind == .trueFalse
+            || task.kind == .multipleChoice || task.kind == .matching || task.kind == .ordering
         return playable && AnswerReconciler.needsGrownUp(task)
     }
 
@@ -190,6 +196,12 @@ struct ImportView: View {
             return "Tick correct or wrong in \(task.items.count) rows"
         case .fillIn:
             return "Fill in \(task.items.count) answers"
+        case .multipleChoice:
+            return "Choose one of \(task.items.count) answers"
+        case .matching:
+            return "Draw \(task.items.filter { $0.isTarget != true }.count) lines"
+        case .ordering:
+            return "Put \(task.items.count) lines in order"
         default:
             return "Not recognised yet: a grown-up confirms"
         }

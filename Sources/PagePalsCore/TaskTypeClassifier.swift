@@ -22,7 +22,8 @@ public enum TaskTypeClassifier {
         (.multipleChoice, ["read and choose", "choose", "wähle", "waehle", "lies und wähle", "kreuze die richtige",
                            "circle the correct", "circle the right", "kreise das richtige", "kreise die richtige"]),
         // numbering and writing come before the open-task words: "Read, say and number the pictures" is numbering
-        (.numberInOrder, ["number the", "number and", "put in order", "in order", "nummeriere", "reihenfolge"]),
+        (.ordering, ["put in order", "in order", "order the", "arrange", "reihenfolge", "ordne die", "bring in order"]),
+        (.numberInOrder, ["number the", "number and", "nummeriere"]),
         (.fillIn, ["write", "fill in", "complete", "schreibe", "ergänze", "setze ein"]),
         (.openTask, ["colour", "color", "draw", "sing", "say", "speak", "male", "zeichne", "sprich", "singe"])
     ]

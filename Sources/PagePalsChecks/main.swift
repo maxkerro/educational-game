@@ -962,5 +962,52 @@ do {
     check(ticks.recall >= 0.8 && ticks.precision >= 0.8, "PP-011: tick circles on the test pages (\(ticks.hits)/\(ticks.expected), \(ticks.extras) extra)")
 }
 
+// PP-020 / PP-021 / PP-025 / PP-026: builders for the other task types
+do {
+    func box(_ x: Double, _ y: Double, _ w: Double = 0.5, _ h: Double = 0.03) -> PageRect { PageRect(x: x, y: y, width: w, height: h) }
+    func first(_ lines: [PageText], pictures: [PageRect] = []) -> PlayTask? {
+        TaskBuilder.buildTasks(lines: lines, emptyCircles: [], pictures: pictures, idPrefix: "p1").first
+    }
+
+    let inline = first([textLine("2. Read and choose.", 0.05, 0.10), PageText(text: "The cat is on the mat.  A) big   B) red   C) fast", box: box(0.1, 0.16, 0.8))])
+    check(inline?.kind == .multipleChoice && inline?.items.map { $0.label ?? "" } == ["big", "red", "fast"], "PP-021: letters on one line give the options")
+    let xs = inline?.items.compactMap { $0.region?.x } ?? []
+    check(xs.count == 3 && xs[0] < xs[1] && xs[1] < xs[2], "PP-021: options sit left to right")
+
+    let separate = first([textLine("2. Read and choose.", 0.05, 0.10), textLine("Which colour is the sun?", 0.1, 0.16), textLine("A) yellow", 0.1, 0.20), textLine("B) blue", 0.1, 0.24)])
+    check(separate.map { $0.items.map { $0.label ?? "" } } == ["yellow", "blue"], "PP-021: one option per line, the question is not an option")
+
+    let plain = first([textLine("2. Read and choose.", 0.05, 0.10), textLine("cat", 0.1, 0.16), textLine("dog", 0.1, 0.20), textLine("sun", 0.1, 0.24)])
+    check(plain?.kind == .multipleChoice && plain?.items.count == 3, "PP-021: short lines are options")
+    check(first([textLine("2. Read and choose.", 0.05, 0.10), textLine("cat", 0.1, 0.16)])?.kind == .openTask, "PP-021: one line is not a choice")
+    check(first([textLine("2. Read and choose.", 0.05, 0.10), textLine("12", 0.5, 0.95)])?.kind == .openTask, "PP-021: page numbers are not options")
+
+    let sentences = first([textLine("3. Put the sentences in order.", 0.05, 0.10), textLine("is on the mat the cat", 0.1, 0.16), textLine("the sun is hot", 0.1, 0.20), textLine("a big dog runs", 0.1, 0.24)])
+    check(sentences?.kind == .ordering && sentences?.items.map { $0.label ?? "" } == ["is on the mat the cat", "the sun is hot", "a big dog runs"], "PP-025: scrambled sentences are the items, in printed order")
+    check(first([textLine("3. Put the sentences in order.", 0.05, 0.10), textLine("one", 0.1, 0.16), textLine("two", 0.1, 0.20), textLine("three", 0.1, 0.24)])?.kind == .openTask, "PP-025: single words are not sentences")
+
+    let pics = [box(0.1, 0.15, 0.1, 0.08), box(0.1, 0.27, 0.1, 0.08), box(0.1, 0.39, 0.1, 0.08)]
+    let wordsAtRight = [textLine("dog", 0.6, 0.18), textLine("sun", 0.6, 0.30), textLine("cat", 0.6, 0.42)]
+    let match = first([textLine("4. Draw lines from the pictures to the words.", 0.05, 0.10)] + wordsAtRight, pictures: pics)
+    check(match?.kind == .matching && match?.items.count == 6 && match?.items.filter { $0.isTarget == true }.map { $0.label ?? "" } == ["dog", "sun", "cat"], "PP-020: pictures and words become the two sides")
+    check(match?.items.filter { $0.isTarget == false }.allSatisfy { $0.label == nil && $0.region != nil } == true, "PP-020: pictures start the lines")
+    check(first([textLine("4. Draw lines from the pictures to the words.", 0.05, 0.10)] + wordsAtRight.dropLast(), pictures: pics)?.kind == .openTask, "PP-020: unequal sides are left to a grown-up")
+    check(first([textLine("4. Draw lines from the pictures to the words.", 0.05, 0.10)] + wordsAtRight)?.kind == .openTask, "PP-020: no pictures, no matching")
+
+    check(TaskTypeClassifier.kind(forHeader: "Put the sentences in order.") == .ordering && TaskTypeClassifier.kind(forHeader: "Number the pictures.") == .numberInOrder, "PP-025: ordering words are not numbering")
+    check(TaskKind.allCases.contains(.ordering) && TaskKind(rawValue: "ordering") == .ordering, "PP-025: ordering is a task kind")
+    let oldItem = try? JSONDecoder().decode(TaskItem.self, from: Data(#"{"id":"a"}"#.utf8))
+    check(oldItem?.isTarget == nil, "PP-020: packs without the side flag still load")
+
+    var matchKey = AnswerKey(pairs: ["p1-t4-a1": "p1-t4-b1"])
+    var matchTask = match ?? PlayTask(id: "x", kind: .matching, prompt: "x")
+    matchTask.key = matchKey
+    check(TaskEvaluator.evaluate(task: matchTask, response: AnswerKey(pairs: ["p1-t4-a1": "p1-t4-b1"])).isComplete && !TaskEvaluator.evaluate(task: matchTask, response: AnswerKey(pairs: ["p1-t4-a1": "p1-t4-b2"])).isComplete, "PP-020: the key judges the lines")
+    matchKey.choice = nil
+    var choiceTask = inline ?? PlayTask(id: "y", kind: .multipleChoice, prompt: "y")
+    choiceTask.key = AnswerKey(choice: "p1-t2-o2")
+    check(TaskEvaluator.evaluate(task: choiceTask, response: AnswerKey(choice: "p1-t2-o2")).isComplete && TaskEvaluator.evaluate(task: choiceTask, response: AnswerKey(choice: "p1-t2-o1")).incorrect == ["choice"], "PP-021: the key judges the choice")
+}
+
 print(failures == 0 ? "\nAll checks passed." : "\n\(failures) check(s) failed.")
 exit(failures == 0 ? 0 : 1)

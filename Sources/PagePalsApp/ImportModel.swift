@@ -123,6 +123,7 @@ final class ImportModel: ObservableObject {
                     emptyCircles: foundCircles,
                     blanks: foundBars,
                     tickCircles: foundTicks,
+                    pictures: foundRegions.filter { $0.kind == .picture }.map { $0.box },
                     idPrefix: "p\(index + 1)",
                     pageAspect: aspect
                 )

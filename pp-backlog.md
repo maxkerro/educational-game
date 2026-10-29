@@ -396,7 +396,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Unknown tasks become open tasks
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
 - **Commits:** 88f2514, 89b8ede, a4c4132
-- **Notes:** Old id B7. Partly done. Round 1 (M3): `TaskTypeClassifier` chooses the kind from header words (English, German; whole words) and shapes. `TaskBuilder` does not use it yet because the other kinds have no page builders or players. Review 4: Colouring and drawing words beat empty circles. Review 5: numbering and writing phrases come before the open-task words, and only colouring or drawing verbs ('Colour', 'Draw', 'Male') beat empty circles; 'Read, say and number' is numbering. Review 6: A colouring or drawing verb makes empty circles part of the picture unless the header asks for numbering; writing words with answer bars give fill-in even when circles are found; 'Number and colour' is numbering; 'Circle the correct …' is choosing. A plain 'Circle …' waits for the circling kind (PP-022).
+- **Notes:** Old id B7. Partly done. Round 1 (M3): `TaskTypeClassifier` chooses the kind from header words (English, German; whole words) and shapes. `TaskBuilder` does not use it yet because the other kinds have no page builders or players. Review 4: Colouring and drawing words beat empty circles. Review 5: numbering and writing phrases come before the open-task words, and only colouring or drawing verbs ('Colour', 'Draw', 'Male') beat empty circles; 'Read, say and number' is numbering. Review 6: A colouring or drawing verb makes empty circles part of the picture unless the header asks for numbering; writing words with answer bars give fill-in even when circles are found; 'Number and colour' is numbering; 'Circle the correct …' is choosing. A plain 'Circle …' waits for the circling kind (PP-022). Round 3 (M3): header words now also build choose-one, matching and ordering tasks (`OtherTasks`); crosswords, word searches and circling still become open tasks.
 
 ### PP-014 — Link each picture to its word or sentence (B8)
 - **Status:** todo
@@ -426,7 +426,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
 - **Notes:** Old id B9.
 
 ### PP-016 — Test pages for recognition (B10)
-- **Status:** todo
+- **Status:** doing
 - **Area:** Recognise the tasks on a page · **Points:** 5 · **Priority:** Must · **Depends on:** —
 - **Story:** As a maintainer, I want synthetic test pages with known answers so that I can measure recognition and catch regressions.
 - **Description:** The app finds each task, its answer fields and its pictures by itself. Old E0-6, E7-6.
@@ -436,7 +436,7 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] `swift run PagePalsChecks` runs it
 - **Tests:** 
 - **Commits:** 
-- **Notes:** Old id B10.
+- **Notes:** Old id B10. Round 1 (M3, 2026-10-29): `TestPages` draws ten pages (every task type at least twice, plain words and coloured blocks, no copyrighted content) with every circle, bar, tick circle, picture and header at a known place; `TestPages.score` runs the importer steps and `RecognitionScore` compares; `swift run PagePalsChecks` prints one INFO line per page. Written without running: the AC stay open until the first run shows the numbers in `.review/last-push.log`. The thresholds (circles, bars, ticks at least 80% found and 80% real; headers at least 90%) are guesses until then.
 
 ### PP-020 — Draw lines to match (C4)
 - **Status:** doing
@@ -449,19 +449,19 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Works picture-word and picture-picture
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
 - **Commits:** 88f2514, 89b8ede
-- **Notes:** Old id C4. Round 1 (M3): `LineMatching` judges where a dragged line ends (snap, wrong, missed). The drag view is not built. Review 4: A line drawn from either end is judged against the key; a line from something not in the key is wrong.
+- **Notes:** Old id C4. Round 1 (M3): `LineMatching` judges where a dragged line ends (snap, wrong, missed). The drag view is not built. Review 4: A line drawn from either end is judged against the key; a line from something not in the key is wrong. Round 2 (M3): `OtherTasks.matching` pairs the pictures with as many short words; `InteractiveTaskView` draws a line from a picture to a word with a drag, snaps it, shakes a wrong one back. Never run.
 
 ### PP-021 — Choose one answer (C5)
-- **Status:** todo
+- **Status:** doing
 - **Area:** Play: one interactive page per task · **Points:** 5 · **Priority:** Must · **Depends on:** —
 - **Story:** As a child, I want to tap the right answer among several so that I can do 'read and choose' tasks.
 - **Description:** The child sees the book page and answers on it. Old E3-6.
 - **Acceptance criteria:**
   - [ ] Options as buttons with the book's text or pictures
   - [ ] Text can be read aloud (C12)
-- **Tests:** 
+- **Tests:** Sources/PagePalsChecks/main.swift (logic only)
 - **Commits:** 
-- **Notes:** Old id C5.
+- **Notes:** Old id C5. Round 1 (M3): `OtherTasks.choice` builds the options from 'A) …' markers (one line or one per line) or short lines; `InteractiveTaskView` shows tappable options, reads the tapped text aloud (voices of the Mac) and judges by the key a grown-up sets once. The view has never been run.
 
 ### PP-022 — Circle or underline (C6)
 - **Status:** todo
@@ -509,19 +509,19 @@ Story numbers: `PP-001`… follow the old epic order (A1 = PP-001 … I7 = PP-07
   - [ ] Feedback per position
 - **Tests:** Sources/PagePalsChecks/main.swift (logic only)
 - **Commits:** 88f2514, 89b8ede
-- **Notes:** Old id C9. Round 1 (M3): `OrderingBoard` starts unsolved, moves items and gives the answer in the key's shape. The drag view is not built. Review 4: The board starts in a seeded shuffle that is never the solution.
+- **Notes:** Old id C9. Round 1 (M3): `OrderingBoard` starts unsolved, moves items and gives the answer in the key's shape. The drag view is not built. Review 4: The board starts in a seeded shuffle that is never the solution. Round 2 (M3): new task kind `ordering`, built from scrambled sentences (`OtherTasks.ordering`); `InteractiveTaskView` lists them with drag to move and a Check button. Never run.
 
 ### PP-026 — Do open tasks on paper and confirm (C10)
-- **Status:** todo
+- **Status:** doing
 - **Area:** Play: one interactive page per task · **Points:** 5 · **Priority:** Must · **Depends on:** —
 - **Story:** As a child, I want a page even for drawing, colouring or speaking tasks so that no task is skipped.
 - **Description:** The child sees the book page and answers on it. Old E3-8.
 - **Acceptance criteria:**
   - [ ] Shows the task page and a 'Done' button
   - [ ] A grown-up confirms, the star is given
-- **Tests:** 
+- **Tests:** Sources/PagePalsChecks/main.swift (logic only)
 - **Commits:** 
-- **Notes:** Old id C10.
+- **Notes:** Old id C10. Round 1 (M3): open tasks open `InteractiveTaskView`: the page, a Done button, and an adult sum before the star is given (`StarStore`, kept on this Mac). Never run.
 
 ## M4 — Three subjects
 

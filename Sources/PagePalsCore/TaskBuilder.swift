@@ -97,7 +97,8 @@ public enum TaskBuilder {
     ///   - blanks: boxes of grey answer bars; a bar right of a sum like "three + one =" becomes its blank
     ///   - idPrefix: makes task ids unique across pages, e.g. "p3"
     ///   - pageAspect: page width / height; above 1.2 the page is read as a two-page spread
-    public static func buildTasks(lines: [PageText], emptyCircles: [PageRect], blanks: [PageRect] = [], tickCircles: [PageRect] = [], idPrefix: String, pageAspect: Double = 0.7) -> [PlayTask] {
+    ///   - pictures: boxes of the pictures found on the page (needed for matching tasks)
+    public static func buildTasks(lines: [PageText], emptyCircles: [PageRect], blanks: [PageRect] = [], tickCircles: [PageRect] = [], pictures: [PageRect] = [], idPrefix: String, pageAspect: Double = 0.7) -> [PlayTask] {
         var tasks: [PlayTask] = []
         for (index, zone) in zones(from: lines, pageAspect: pageAspect).enumerated() {
             let inside = emptyCircles
@@ -121,6 +122,8 @@ public enum TaskBuilder {
                 tasks.append(fill)
             } else if !isTick, let fill = answerBarsTask(id: id, prompt: prompt, zone: zone, lines: lines, blanks: blanks) {
                 tasks.append(fill)
+            } else if !isTick, let other = OtherTasks.build(id: id, prompt: prompt, zone: zone, lines: lines, pictures: pictures) {
+                tasks.append(other)
             } else {
                 tasks.append(PlayTask(id: id, kind: .openTask, prompt: prompt, region: zone.box, items: [], key: nil, confidence: 0.3))
             }

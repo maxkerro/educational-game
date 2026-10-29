@@ -20,6 +20,7 @@ public enum TaskKind: String, Codable, Sendable, CaseIterable {
     case fillIn          // write text into blanks
     case trueFalse       // tick correct / wrong
     case numberInOrder   // number pictures or sentences
+    case ordering        // drag words, sentences or pictures into order
     case matching        // draw lines between pairs
     case crossword       // grid with picture clues
     case wordSearch      // find the words in a letter grid, then fill in
@@ -36,9 +37,12 @@ public struct TaskItem: Codable, Equatable, Identifiable, Sendable {
     public var imageFile: String?
     /// Tick tasks: `region` is the "correct" circle of a row and this is its "wrong" circle.
     public var secondRegion: PageRect?
+    /// Matching tasks: true for the words / pictures a line ends on, false for those it starts from.
+    public var isTarget: Bool?
 
-    public init(id: String, label: String? = nil, region: PageRect? = nil, imageFile: String? = nil, secondRegion: PageRect? = nil) {
+    public init(id: String, label: String? = nil, region: PageRect? = nil, imageFile: String? = nil, secondRegion: PageRect? = nil, isTarget: Bool? = nil) {
         self.secondRegion = secondRegion
+        self.isTarget = isTarget
         self.id = id
         self.label = label
         self.region = region
