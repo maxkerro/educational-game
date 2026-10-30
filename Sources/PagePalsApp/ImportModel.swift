@@ -101,10 +101,13 @@ final class ImportModel: ObservableObject {
             if !result.failed.isEmpty {
                 let shown = result.failed.prefix(8).map(String.init).joined(separator: ", ")
                 let more = result.failed.count > 8 ? " and \(result.failed.count - 8) more" : ""
-                parts.append("Page(s) \(shown)\(more) could not be read or saved; import again to retry them.")
+                parts.append("\(title): page(s) \(shown)\(more) could not be read or saved; import again to retry them.")
             }
-            if result.unmatchedKeys > 0 {
-                parts.append("\(result.unmatchedKeys) typed answer(s) did not fit a task of the imported book (cut spreads); please set them again.")
+            if !result.unmatchedKeys.isEmpty {
+                parts.append("\(result.unmatchedKeys.count) typed answer(s) did not fit a task of the imported book (cut spreads); please set them again.")
+                // reported once, then dropped, so the message does not come back with every import
+                for id in result.unmatchedKeys { self.keys[id] = nil }
+                KeyStore.save(self.keys, book: scope)
             }
             if parts.isEmpty { parts.append("Import finished at \(result.progress.finished.count) of \(total) pages.") }
             self.status = parts.joined(separator: " ")
@@ -129,6 +132,8 @@ final class ImportModel: ObservableObject {
         keyStatus = ""
         libraryID = id
         libraryPack = pack
+        // answers typed earlier (PDF open) and answers already in the pack are one list
+        keys = KeyStore.load(book: id).merging(PackMerge.typedKeys(in: pack)) { stored, _ in stored }
         pageCount = pack.pages.count
         pageIndex = 0
         showLibraryPage(0)
@@ -278,19 +283,17 @@ final class ImportModel: ObservableObject {
         }
     }
 
-    /// Remembers the answers a parent entered for a task (kept on this Mac, per book file name).
+    /// Remembers the answers a parent entered for a task (kept on this Mac, per book).
     func saveKey(_ key: AnswerKey, for taskID: String) {
-        if var pack = libraryPack, let id = libraryID {
-            for p in pack.pages.indices {
-                guard let t = pack.pages[p].tasks.firstIndex(where: { $0.id == taskID }) else { continue }
-                pack.pages[p].tasks[t].key = key
-                pack.pages[p].tasks[t].keySource = .parent
-            }
-            libraryPack = pack
-            try? lessons.save(pack, id: id)
-        } else {
-            keys[taskID] = key
-            KeyStore.save(keys, book: bookScope)
+        // one list of typed answers per book (KeyStore), and the library copy follows it, so neither side goes stale
+        keys[taskID] = key
+        KeyStore.save(keys, book: bookScope)
+        if let pack = libraryPack, let id = libraryID {
+            let updated = PackMerge.setKey(key, for: taskID, in: pack)
+            libraryPack = updated
+            try? lessons.save(updated, id: id)
+        } else if importTask == nil, let stored = try? lessons.load(id: bookScope) {
+            try? lessons.save(PackMerge.setKey(key, for: taskID, in: stored), id: bookScope)
         }
         if let i = tasks.firstIndex(where: { $0.id == taskID }) {
             tasks[i].key = key

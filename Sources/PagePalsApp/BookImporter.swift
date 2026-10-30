@@ -18,8 +18,9 @@ enum BookImporter {
         var progress: ImportProgress
         /// PDF pages (1-based) that could not be read or saved; they stay pending for the next import.
         var failed: [Int]
-        /// Typed answers that matched no task of the imported book (for example on a cut spread).
-        var unmatchedKeys: Int = 0
+        /// Typed answers (task ids) that matched no task of the imported book, for example on a cut spread.
+        /// Answers of pages that failed are not listed: they fit once the page is read.
+        var unmatchedKeys: [String] = []
     }
 
     static var libraryRoot: URL {
@@ -95,7 +96,9 @@ enum BookImporter {
 
         let finished = finish(pack, id: id, parentKeys: parentKeys(), library: library)
         try? library.save(finished.pack, id: id)
-        return Outcome(progress: state, failed: skipped.sorted().map { $0 + 1 }, unmatchedKeys: finished.unmatched)
+        let failedPages = Set(skipped.map { $0 + 1 })
+        let unmatched = finished.unmatched.filter { !failedPages.contains(PackMerge.pdfPage(of: $0)) }.sorted()
+        return Outcome(progress: state, failed: skipped.sorted().map { $0 + 1 }, unmatchedKeys: unmatched)
     }
 
     /// One PDF page becomes one or two book pages (a spread is cut at the gutter).
@@ -134,7 +137,7 @@ enum BookImporter {
 
     /// The book language from the first pages, the answers from the key pages at the back, and the answers a
     /// grown-up typed. Typed answers always win.
-    private static func finish(_ pack: LessonPack, id: String, parentKeys: [String: AnswerKey], library: LessonLibrary) -> (pack: LessonPack, unmatched: Int) {
+    private static func finish(_ pack: LessonPack, id: String, parentKeys: [String: AnswerKey], library: LessonLibrary) -> (pack: LessonPack, unmatched: [String]) {
         var pack = pack
         var stored: [StoredPageText?] = []
         for page in pack.pages {
@@ -159,6 +162,6 @@ enum BookImporter {
             matched.formUnion(overlaid.matched)
             pack.pages[i].tasks = tasks
         }
-        return (pack, parentKeys.keys.filter { !matched.contains($0) }.count)
+        return (pack, parentKeys.keys.filter { !matched.contains($0) })
     }
 }

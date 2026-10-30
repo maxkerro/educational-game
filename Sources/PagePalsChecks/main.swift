@@ -1070,6 +1070,11 @@ do {
     check(overlaid.tasks[0].key?.text["a"] == "mine" && overlaid.tasks[0].keySource == .parent && overlaid.tasks[1].key?.text["a"] == "book", "PP-004: typed answers beat the answer pages of the book")
     check(overlaid.matched == ["p2-t1"], "PP-004: typed answers that fit no task are noticed")
 
+    let edited = PackMerge.setKey(AnswerKey(text: ["a": "B"]), for: "p2-t1", in: pack)
+    check(edited.pages[1].tasks[0].key?.text["a"] == "B" && edited.pages[1].tasks[0].keySource == .parent, "PP-004: a correction in the library is stored as typed")
+    check(PackMerge.typedKeys(in: edited)["p2-t1"]?.text["a"] == "B" && PackMerge.typedKeys(in: edited)["p2-t2"] == nil, "PP-004: only typed answers are listed")
+    let reread = PackMerge.replacePage(in: edited, pdfPage: 2, with: [again])
+    check(reread.pages[0].tasks[0].key?.text["a"] == "B", "PP-004: a correction made in the library survives a re-read")
     check(PackMerge.starKey(scope: "A-1", task: "p1-t2") != PackMerge.starKey(scope: "B-2", task: "p1-t2"), "PP-026: the same task id in two books earns stars twice")
 }
 

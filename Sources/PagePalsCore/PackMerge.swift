@@ -39,6 +39,29 @@ public enum PackMerge {
         return (result, matched)
     }
 
+    /// Sets the answers a grown-up typed on the task with this id (source: grown-up).
+    public static func setKey(_ key: AnswerKey, for taskID: String, in pack: LessonPack) -> LessonPack {
+        var pack = pack
+        for p in pack.pages.indices {
+            for t in pack.pages[p].tasks.indices where pack.pages[p].tasks[t].id == taskID {
+                pack.pages[p].tasks[t].key = key
+                pack.pages[p].tasks[t].keySource = .parent
+            }
+        }
+        return pack
+    }
+
+    /// The answers a grown-up typed that are already in a pack (by task id).
+    public static func typedKeys(in pack: LessonPack) -> [String: AnswerKey] {
+        var result: [String: AnswerKey] = [:]
+        for page in pack.pages {
+            for task in page.tasks where task.keySource == .parent {
+                if let key = task.key { result[task.id] = key }
+            }
+        }
+        return result
+    }
+
     /// The key under which stars are kept: task ids repeat in every book, so the book comes first.
     public static func starKey(scope: String, task: String) -> String { scope + "/" + task }
 }
