@@ -106,8 +106,11 @@ final class ImportModel: ObservableObject {
             if !result.unmatchedKeys.isEmpty {
                 parts.append("\(result.unmatchedKeys.count) typed answer(s) did not fit a task of the imported book (cut spreads); please set them again.")
                 // reported once, then dropped, so the message does not come back with every import
-                for id in result.unmatchedKeys { self.keys[id] = nil }
-                KeyStore.save(self.keys, book: scope)
+                // the list of the imported book, not of the book that is open now
+                var stored = KeyStore.load(book: scope)
+                for id in result.unmatchedKeys { stored[id] = nil }
+                KeyStore.save(stored, book: scope)
+                if self.bookScope == scope { self.keys = stored }
             }
             if parts.isEmpty { parts.append("Import finished at \(result.progress.finished.count) of \(total) pages.") }
             self.status = parts.joined(separator: " ")
@@ -130,11 +133,15 @@ final class ImportModel: ObservableObject {
         isWorking = false
         refreshAfterShow = false
         keyStatus = ""
+        // answers typed earlier (PDF open, or while an import ran) and answers already in the pack are one list;
+        // the newest typed answer (KeyStore) is laid on every page
+        let merged = KeyStore.load(book: id).merging(PackMerge.typedKeys(in: pack)) { stored, _ in stored }
+        let opened = PackMerge.applyTyped(merged, to: pack).pack
+        if opened != pack { try? lessons.save(opened, id: id) }
+        keys = merged
         libraryID = id
-        libraryPack = pack
-        // answers typed earlier (PDF open) and answers already in the pack are one list
-        keys = KeyStore.load(book: id).merging(PackMerge.typedKeys(in: pack)) { stored, _ in stored }
-        pageCount = pack.pages.count
+        libraryPack = opened
+        pageCount = opened.pages.count
         pageIndex = 0
         showLibraryPage(0)
     }

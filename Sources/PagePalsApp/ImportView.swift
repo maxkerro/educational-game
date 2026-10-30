@@ -53,7 +53,7 @@ struct ImportView: View {
 
     private var toolbar: some View {
         HStack(spacing: 12) {
-            Button("Open PDF\u{2026}") { showImporter = true }
+            Button("Open PDF\u{2026}") { showImporter = true }.disabled(model.importFraction != nil)
             Button("Previous") { model.previous() }.disabled(!model.canGoBack)
             Button("Next") { model.next() }.disabled(!model.canGoForward)
             Button("Import book") { model.importBook() }.disabled(!model.canImportBook)

@@ -1075,6 +1075,12 @@ do {
     check(PackMerge.typedKeys(in: edited)["p2-t1"]?.text["a"] == "B" && PackMerge.typedKeys(in: edited)["p2-t2"] == nil, "PP-004: only typed answers are listed")
     let reread = PackMerge.replacePage(in: edited, pdfPage: 2, with: [again])
     check(reread.pages[0].tasks[0].key?.text["a"] == "B", "PP-004: a correction made in the library survives a re-read")
+    let typedNow = ["p2-t1": AnswerKey(text: ["a": "newer"]), "p7-t1": AnswerKey(text: ["a": "page failed"]), "p9-t4": AnswerKey(text: ["a": "cut spread"])]
+    let laid = PackMerge.applyTyped(typedNow, to: pack)
+    check(laid.pack.pages[1].tasks[0].key?.text["a"] == "newer", "PP-004: a newer typed answer beats the one in the pack")
+    check(laid.matched == ["p2-t1"], "PP-004: only answers that found a task are matched")
+    check(PackMerge.unmatched(typed: typedNow, matched: laid.matched, failedPages: [7]) == ["p9-t4"], "PP-004: an answer on a failed page is not reported, one on a cut spread is")
+    check(PackMerge.unmatched(typed: typedNow, matched: laid.matched, failedPages: []) == ["p7-t1", "p9-t4"], "PP-004: without failed pages both are reported")
     check(PackMerge.starKey(scope: "A-1", task: "p1-t2") != PackMerge.starKey(scope: "B-2", task: "p1-t2"), "PP-026: the same task id in two books earns stars twice")
 }
 

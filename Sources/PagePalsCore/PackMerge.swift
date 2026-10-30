@@ -39,6 +39,24 @@ public enum PackMerge {
         return (result, matched)
     }
 
+    /// Puts typed answers on every task of a pack (a newer typed answer wins over what the pack holds).
+    public static func applyTyped(_ typed: [String: AnswerKey], to pack: LessonPack) -> (pack: LessonPack, matched: Set<String>) {
+        var pack = pack
+        var matched = Set<String>()
+        for p in pack.pages.indices {
+            let result = overlay(typed, on: pack.pages[p].tasks)
+            pack.pages[p].tasks = result.tasks
+            matched.formUnion(result.matched)
+        }
+        return (pack, matched)
+    }
+
+    /// Typed answers (ids) that found no task. Answers of PDF pages that failed to import are not listed:
+    /// they fit as soon as the page is read.
+    public static func unmatched(typed: [String: AnswerKey], matched: Set<String>, failedPages: Set<Int>) -> [String] {
+        typed.keys.filter { !matched.contains($0) && !failedPages.contains(pdfPage(of: $0)) }.sorted()
+    }
+
     /// Sets the answers a grown-up typed on the task with this id (source: grown-up).
     public static func setKey(_ key: AnswerKey, for taskID: String, in pack: LessonPack) -> LessonPack {
         var pack = pack

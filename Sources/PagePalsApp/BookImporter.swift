@@ -94,11 +94,10 @@ enum BookImporter {
             progress(state)
         }
 
-        let finished = finish(pack, id: id, parentKeys: parentKeys(), library: library)
-        try? library.save(finished.pack, id: id)
         let failedPages = Set(skipped.map { $0 + 1 })
-        let unmatched = finished.unmatched.filter { !failedPages.contains(PackMerge.pdfPage(of: $0)) }.sorted()
-        return Outcome(progress: state, failed: skipped.sorted().map { $0 + 1 }, unmatchedKeys: unmatched)
+        let finished = finish(pack, id: id, parentKeys: parentKeys(), failedPages: failedPages, library: library)
+        try? library.save(finished.pack, id: id)
+        return Outcome(progress: state, failed: skipped.sorted().map { $0 + 1 }, unmatchedKeys: finished.unmatched)
     }
 
     /// One PDF page becomes one or two book pages (a spread is cut at the gutter).
@@ -137,7 +136,7 @@ enum BookImporter {
 
     /// The book language from the first pages, the answers from the key pages at the back, and the answers a
     /// grown-up typed. Typed answers always win.
-    private static func finish(_ pack: LessonPack, id: String, parentKeys: [String: AnswerKey], library: LessonLibrary) -> (pack: LessonPack, unmatched: [String]) {
+    private static func finish(_ pack: LessonPack, id: String, parentKeys: [String: AnswerKey], failedPages: Set<Int>, library: LessonLibrary) -> (pack: LessonPack, unmatched: [String]) {
         var pack = pack
         var stored: [StoredPageText?] = []
         for page in pack.pages {
@@ -162,6 +161,6 @@ enum BookImporter {
             matched.formUnion(overlaid.matched)
             pack.pages[i].tasks = tasks
         }
-        return (pack, parentKeys.keys.filter { !matched.contains($0) })
+        return (pack, PackMerge.unmatched(typed: parentKeys, matched: matched, failedPages: failedPages))
     }
 }
