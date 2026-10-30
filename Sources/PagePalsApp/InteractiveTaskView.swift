@@ -298,7 +298,7 @@ struct InteractiveTaskView: View {
     private func awardIfDone() {
         guard !starsGiven, !authoring, let e = evaluation, e.isComplete else { return }
         starsGiven = true
-        StarStore.award(StarLedger.stars(complete: true, wrongTries: wrongTries), task: scope + "/" + task.id)
+        StarStore.award(StarLedger.stars(complete: true, wrongTries: wrongTries), task: PackMerge.starKey(scope: scope, task: task.id))
     }
 
     @ViewBuilder
@@ -382,7 +382,7 @@ struct InteractiveTaskView: View {
             Button("Confirm") {
                 if gate.accepts(gateAnswer) {
                     starsGiven = true
-                    StarStore.award(3, task: scope + "/" + task.id)
+                    StarStore.award(3, task: PackMerge.starKey(scope: scope, task: task.id))
                 } else {
                     gateAnswer = ""
                 }

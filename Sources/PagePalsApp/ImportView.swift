@@ -44,7 +44,7 @@ struct ImportView: View {
             }
             Button("Keep it", role: .cancel) { confirmRemove = nil }
         } message: {
-            Text("The pictures and the answers a grown-up typed are deleted. The PDF file is not touched.")
+            Text("The pictures and the answers a grown-up typed are deleted. Stars already earned stay. The PDF file is not touched.")
         }
         .fileImporter(isPresented: $showImporter, allowedContentTypes: [.pdf]) { result in
             if case .success(let url) = result { model.open(url: url) }

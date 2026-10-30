@@ -18,6 +18,8 @@ enum BookImporter {
         var progress: ImportProgress
         /// PDF pages (1-based) that could not be read or saved; they stay pending for the next import.
         var failed: [Int]
+        /// Typed answers that matched no task of the imported book (for example on a cut spread).
+        var unmatchedKeys: Int = 0
     }
 
     static var libraryRoot: URL {
@@ -27,9 +29,10 @@ enum BookImporter {
     }
 
     /// Start, end and size of the file: cheap, and different for different workbooks.
-    static func fingerprint(of url: URL, pageCount: Int) -> UInt64 {
+    static func fingerprint(of url: URL, pageCount: Int) -> UInt64? {
         var parts: [Data] = [Data("\(pageCount)".utf8)]
-        if let handle = try? FileHandle(forReadingFrom: url) {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        do {
             defer { try? handle.close() }
             let size = (try? handle.seekToEnd()) ?? 0
             parts.append(Data("\(size)".utf8))
@@ -44,17 +47,12 @@ enum BookImporter {
         return BookID.fingerprint(parts)
     }
 
-    /// The PDF page a book page came from: "p12", "p12a" and "p12b" are all PDF page 12.
-    static func pdfPage(of pageID: String) -> Int {
-        Int(pageID.dropFirst().prefix { $0.isNumber }) ?? 0
-    }
-
     /// `parentKeys` are the answers a grown-up typed while the PDF was open (by task id).
     static func run(
         book: PDFBook,
         id: String,
         title: String,
-        parentKeys: [String: AnswerKey],
+        parentKeys: @Sendable () -> [String: AnswerKey],
         library: LessonLibrary,
         cancel: CancelFlag,
         progress: @escaping @Sendable (ImportProgress) -> Void
@@ -78,26 +76,11 @@ enum BookImporter {
                 return Outcome(progress: state, failed: skipped.sorted().map { $0 + 1 })
             }
             let number = index + 1
-            guard var made = importPage(book: book, index: index, id: id, library: library) else {
+            guard let made = importPage(book: book, index: index, id: id, library: library) else {
                 skipped.insert(index)
                 continue
             }
-            // answers a grown-up typed on this page before are kept when the page is read again
-            let before = pack.pages.filter { BookImporter.pdfPage(of: $0.id) == number }.flatMap { $0.tasks }
-            let typed = Dictionary(before.compactMap { t in t.keySource == .parent ? t.key.map { (t.id, $0) } : nil },
-                                   uniquingKeysWith: { first, _ in first })
-            for p in made.indices {
-                for t in made[p].tasks.indices {
-                    if let key = typed[made[p].tasks[t].id] {
-                        made[p].tasks[t].key = key
-                        made[p].tasks[t].keySource = .parent
-                    }
-                }
-            }
-            var next = pack
-            next.pages.removeAll { BookImporter.pdfPage(of: $0.id) == number }
-            next.pages.append(contentsOf: made)
-            next.pages.sort { BookImporter.pdfPage(of: $0.id) == BookImporter.pdfPage(of: $1.id) ? $0.id < $1.id : BookImporter.pdfPage(of: $0.id) < BookImporter.pdfPage(of: $1.id) }
+            let next = PackMerge.replacePage(in: pack, pdfPage: number, with: made)
             do {
                 try library.save(next, id: id)
             } catch {
@@ -110,9 +93,9 @@ enum BookImporter {
             progress(state)
         }
 
-        pack = finish(pack, id: id, parentKeys: parentKeys, library: library)
-        try? library.save(pack, id: id)
-        return Outcome(progress: state, failed: skipped.sorted().map { $0 + 1 })
+        let finished = finish(pack, id: id, parentKeys: parentKeys(), library: library)
+        try? library.save(finished.pack, id: id)
+        return Outcome(progress: state, failed: skipped.sorted().map { $0 + 1 }, unmatchedKeys: finished.unmatched)
     }
 
     /// One PDF page becomes one or two book pages (a spread is cut at the gutter).
@@ -151,7 +134,7 @@ enum BookImporter {
 
     /// The book language from the first pages, the answers from the key pages at the back, and the answers a
     /// grown-up typed. Typed answers always win.
-    private static func finish(_ pack: LessonPack, id: String, parentKeys: [String: AnswerKey], library: LessonLibrary) -> LessonPack {
+    private static func finish(_ pack: LessonPack, id: String, parentKeys: [String: AnswerKey], library: LessonLibrary) -> (pack: LessonPack, unmatched: Int) {
         var pack = pack
         var stored: [StoredPageText?] = []
         for page in pack.pages {
@@ -163,6 +146,7 @@ enum BookImporter {
         pack.language = BookLanguage.detect(from: sample).rawValue
 
         let entries = BookKeys.entries(pages: stored.map { $0?.texts ?? [] })
+        var matched = Set<String>()
         for (i, page) in pack.pages.enumerated() {
             var tasks = page.tasks
             if !entries.isEmpty, let text = stored[i] {
@@ -170,15 +154,11 @@ enum BookImporter {
                 let byID = Dictionary(applied.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
                 tasks = tasks.map { old in old.keySource == .parent ? old : (byID[old.id] ?? old) }
             }
-            tasks = tasks.map { task in
-                guard task.keySource != .parent, let typed = parentKeys[task.id] else { return task }
-                var task = task
-                task.key = typed
-                task.keySource = .parent
-                return task
-            }
+            let overlaid = PackMerge.overlay(parentKeys, on: tasks)
+            tasks = overlaid.tasks
+            matched.formUnion(overlaid.matched)
             pack.pages[i].tasks = tasks
         }
-        return pack
+        return (pack, parentKeys.keys.filter { !matched.contains($0) }.count)
     }
 }

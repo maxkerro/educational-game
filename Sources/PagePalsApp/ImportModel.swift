@@ -69,7 +69,7 @@ final class ImportModel: ObservableObject {
         guard let book, importTask == nil else { return }
         let id = BookID.make(fileName: bookName, fingerprint: bookFingerprint)
         let title = BookID.title(fileName: bookName)
-        let typed = keys
+        let scope = bookScope
         let flag = CancelFlag()
         cancelFlag = flag
         let total = book.pageCount
@@ -79,26 +79,35 @@ final class ImportModel: ObservableObject {
         let report: @Sendable (ImportProgress) -> Void = { [weak self] p in
             Task { @MainActor in
                 guard let self, self.importTask != nil else { return }
+                guard !flag.isRaised else { return }
                 self.importFraction = p.fraction
                 self.status = "Importing \(title): page \(p.finished.count) of \(total)"
             }
         }
         importTask = Task { [weak self] in
             let result = await Task.detached(priority: .utility) {
-                BookImporter.run(book: book, id: id, title: title, parentKeys: typed, library: lessons, cancel: flag, progress: report)
+                BookImporter.run(book: book, id: id, title: title, parentKeys: { KeyStore.load(book: scope) }, library: lessons, cancel: flag, progress: report)
             }.value
             guard let self else { return }
             self.importFraction = nil
             self.importTask = nil
             self.library = lessons.list()
-            if !result.failed.isEmpty {
-                let list = result.failed.prefix(8).map(String.init).joined(separator: ", ")
-                self.status = "\(title): page(s) \(list) could not be read or saved. Import again to retry them."
-            } else if result.progress.isDone {
-                self.status = "\(title) is in the library (\(total) pages)."
-            } else {
-                self.status = "Import stopped at \(result.progress.finished.count) of \(total) pages. Import again to continue."
+            var parts: [String] = []
+            if result.progress.isDone && result.failed.isEmpty {
+                parts.append("\(title) is in the library (\(total) pages).")
+            } else if result.progress.cancelled {
+                parts.append("Import stopped at \(result.progress.finished.count) of \(total) pages. Import again to continue.")
             }
+            if !result.failed.isEmpty {
+                let shown = result.failed.prefix(8).map(String.init).joined(separator: ", ")
+                let more = result.failed.count > 8 ? " and \(result.failed.count - 8) more" : ""
+                parts.append("Page(s) \(shown)\(more) could not be read or saved; import again to retry them.")
+            }
+            if result.unmatchedKeys > 0 {
+                parts.append("\(result.unmatchedKeys) typed answer(s) did not fit a task of the imported book (cut spreads); please set them again.")
+            }
+            if parts.isEmpty { parts.append("Import finished at \(result.progress.finished.count) of \(total) pages.") }
+            self.status = parts.joined(separator: " ")
         }
     }
 
@@ -127,6 +136,7 @@ final class ImportModel: ObservableObject {
 
     func deleteFromLibrary(id: String) {
         try? lessons.delete(id: id)
+        KeyStore.clear(book: id)
         if libraryID == id { libraryID = nil; libraryPack = nil; image = nil; tasks = []; pageBitmap = nil; pageCount = 0 }
         library = lessons.list()
     }
@@ -158,12 +168,16 @@ final class ImportModel: ObservableObject {
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         do {
             let opened = try PDFBook(url: url)
+            guard let fingerprint = BookImporter.fingerprint(of: url, pageCount: opened.pageCount) else {
+                status = "Could not read that file."
+                return
+            }
             book = opened
             libraryID = nil
             libraryPack = nil
             bookName = url.lastPathComponent
-            bookFingerprint = BookImporter.fingerprint(of: url, pageCount: opened.pageCount)
-            keys = KeyStore.load(book: bookName)
+            bookFingerprint = fingerprint
+            keys = KeyStore.load(book: bookScope)
             scanTask?.cancel()
             generation += 1
             isWorking = false
@@ -276,7 +290,7 @@ final class ImportModel: ObservableObject {
             try? lessons.save(pack, id: id)
         } else {
             keys[taskID] = key
-            KeyStore.save(keys, book: bookName)
+            KeyStore.save(keys, book: bookScope)
         }
         if let i = tasks.firstIndex(where: { $0.id == taskID }) {
             tasks[i].key = key

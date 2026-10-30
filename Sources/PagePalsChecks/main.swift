@@ -1047,5 +1047,31 @@ do {
     check(TestPages.specs.flatMap { $0 }.filter { $0.kind == "ordering" }.count >= 2, "PP-016: ordering is on at least two test pages")
 }
 
+// Review 8: merging pages into a book that exists, typed answers, stars per book
+do {
+    func task(_ id: String, _ text: String? = nil, parent: Bool = false) -> PlayTask {
+        PlayTask(id: id, kind: .fillIn, prompt: "x", key: text.map { AnswerKey(text: ["a": $0]) }, keySource: parent ? .parent : (text == nil ? nil : .answerPage))
+    }
+    let old = BookPage(id: "p2", number: 2, imageFile: "page-2.png", tasks: [task("p2-t1", "typed", parent: true), task("p2-t2", "book")])
+    let other = BookPage(id: "p3", number: 3, imageFile: "page-3.png", tasks: [task("p3-t1")])
+    let pack = LessonPack(title: "T", language: "en", pages: [other, old])
+    let again = BookPage(id: "p2", number: 2, imageFile: "page-2.png", tasks: [task("p2-t1"), task("p2-t2")])
+    let merged = PackMerge.replacePage(in: pack, pdfPage: 2, with: [again])
+    check(merged.pages.map(\.id) == ["p2", "p3"], "PP-004: a re-read page replaces the old one and the pages stay in order")
+    check(merged.pages[0].tasks[0].key?.text["a"] == "typed" && merged.pages[0].tasks[0].keySource == .parent, "PP-004: an answer a grown-up typed survives a re-read")
+    check(merged.pages[0].tasks[1].key == nil, "PP-004: other answers come from the new read")
+
+    let spread = PackMerge.replacePage(in: pack, pdfPage: 2, with: [BookPage(id: "p2a", number: 2, imageFile: "a.png"), BookPage(id: "p2b", number: 3, imageFile: "b.png")])
+    check(spread.pages.map(\.id) == ["p2a", "p2b", "p3"], "PP-003: the two halves of a spread sit between the neighbours")
+    check(PackMerge.pdfPage(of: "p12b") == 12 && PackMerge.pdfPage(of: "p7") == 7 && PackMerge.pdfPage(of: "x") == 0, "PP-003: the PDF page of a book page id")
+
+    let typed = ["p2-t1": AnswerKey(text: ["a": "mine"]), "p9-t1": AnswerKey(text: ["a": "lost"])]
+    let overlaid = PackMerge.overlay(typed, on: [task("p2-t1", "book"), task("p2-t2", "book")])
+    check(overlaid.tasks[0].key?.text["a"] == "mine" && overlaid.tasks[0].keySource == .parent && overlaid.tasks[1].key?.text["a"] == "book", "PP-004: typed answers beat the answer pages of the book")
+    check(overlaid.matched == ["p2-t1"], "PP-004: typed answers that fit no task are noticed")
+
+    check(PackMerge.starKey(scope: "A-1", task: "p1-t2") != PackMerge.starKey(scope: "B-2", task: "p1-t2"), "PP-026: the same task id in two books earns stars twice")
+}
+
 print(failures == 0 ? "\nAll checks passed." : "\n\(failures) check(s) failed.")
 exit(failures == 0 ? 0 : 1)
